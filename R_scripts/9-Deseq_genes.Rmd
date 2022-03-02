@@ -1,0 +1,572 @@
+---
+title: "R Notebook"
+output:
+  html_document:
+    df_print: paged
+---
+
+##Importing tables
+```{r echo = FALSE}
+
+setwd("~/OneDrive\ -\ Michigan\ State\ University/Manning_lab/Mastitis_project/GitHub/data/")
+
+#read in otu table
+otu_table = read.csv("feature_table_genes.csv",sep=",", check.names = F, row.names = 1)
+otu_table=as.matrix(otu_table)
+
+#read in taxonomy
+taxonomy = read.csv("taxonomy_genes.csv",sep=",", row.names = 1)
+taxonomy=as.matrix(taxonomy)
+
+#read in metadata
+metadata=read.table("metadata.csv", sep = ",", header = TRUE, row.names=1, na.strings = "") 
+metadata
+```
+
+##Generating a phyloseq object
+```{r echo=FALSE}
+library("phyloseq")
+
+#import as phyloseq objects
+OTU = otu_table(otu_table,taxa_are_rows=TRUE)
+TAX = tax_table(taxonomy)
+META = sample_data(metadata)
+
+# Sanity checks for consistent OTU names
+taxa_names(TAX)
+taxa_names(OTU)
+
+# Same sample names
+sample_names(OTU)
+sample_names(META)
+
+#Final phyloseq output is named as physeq
+physeq=phyloseq(OTU,TAX,META)
+```
+
+#Filtering samples
+```{r}
+physeq_day1 <- subset_samples(physeq, Time_tx%in%c("Day -1"))
+physeq_week1 <- subset_samples(physeq, Time_tx%in%c("Week 1"))
+physeq_week5 <- subset_samples(physeq, Time_tx%in%c("Week 5"))
+physeq_week9 <- subset_samples(physeq, Time_tx%in%c("Week 9"))
+```
+
+#Install DESeq2 if necessary
+```{r}
+if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+BiocManager::install("DESeq2")
+BiocManager::install("glmGamPoi")
+```
+
+#Test the best DESeq2 fit model
+```{r}
+library(DESeq2)
+library(glmGamPoi)
+dds <- phyloseq_to_deseq2(physeq_day1, ~ Treatment)
+dds = DESeq(dds, test="Wald", fitType="glmGamPoi")
+dds_es <- estimateSizeFactors(dds)
+par <- estimateDispersions(dds_es, fitType = "parametric")
+loc <- estimateDispersions(dds_es, fitType = "local")
+me <- estimateDispersions(dds_es, fitType = "mean")
+gl <- estimateDispersions(dds_es, fitType = "glmGamPoi")
+```
+
+```{r}
+plotDispEsts(par, main= "dispEst: parametric")
+```
+
+```{r}
+plotDispEsts(me, main= "dispEst: mean")
+```
+
+```{r}
+plotDispEsts(me, main= "local")
+```
+
+```{r}
+plotDispEsts(gl, main= "dispEst: glmGamPoi")
+```
+
+#DAY 1
+##Aggregating abundances by classification level
+```{r}
+day1_type <- tax_glom(physeq_day1, taxrank = 'Type')
+day1_class <- tax_glom(physeq_day1, taxrank = 'Class')
+day1_mech <- tax_glom(physeq_day1, taxrank = 'Mechanism')
+day1_gene <- tax_glom(physeq_day1, taxrank = 'Gene')
+day1_name <- tax_glom(physeq_day1, taxrank = 'Name')
+```
+
+##Deseq2 Type
+```{r}
+#Convering phyloseq-format into DESeqDataSet with dispersions estimated by treatment 
+dds <- phyloseq_to_deseq2(day1_type, ~ Treatment)
+dds = DESeq(dds, test="Wald", fitType="local")
+
+#Lists the coefficients/comparisons
+resultsNames(dds)
+
+#Results table of the desired comparison
+res <- results(dds, name="Treatment_Control_vs_Antibiotic") 
+
+#Results with significant p-values
+sigtab = res[which(res$pvalue<0.05), ]
+
+#Adding taxonomic names
+sigtab <- merge(day1_type@tax_table,sigtab, by = 0)
+
+#Exporting significant results as a csv file (in case you have)
+write.table(sigtab, file="~/OneDrive - Michigan State University/Manning_lab/Mastitis_project/tables/diff_abundance/DESeq2/genes/deseq_type_day1.csv",sep = ",") 
+```
+
+##Deseq2 Class
+```{r}
+#Convering phyloseq-format into DESeqDataSet with dispersions estimated by treatment 
+dds <- phyloseq_to_deseq2(day1_class, ~ Treatment)
+dds = DESeq(dds, test="Wald", fitType="local")
+
+#Lists the coefficients/comparisons
+resultsNames(dds)
+
+#Results table of the desired comparison
+res <- results(dds, name="Treatment_Control_vs_Antibiotic") 
+
+#Results with significant p-values
+sigtab = res[which(res$pvalue<0.05), ]
+
+#Adding taxonomic names
+sigtab <- merge(day1_class@tax_table,sigtab, by = 0)
+
+#Exporting significant results as a csv file (in case you have)
+write.table(sigtab, file="~/OneDrive - Michigan State University/Manning_lab/Mastitis_project/tables/diff_abundance/DESeq2/genes/deseq_class_day1.csv",sep = ",") 
+```
+
+##Deseq2 Mechanism
+```{r}
+#Convering phyloseq-format into DESeqDataSet with dispersions estimated by treatment 
+dds <- phyloseq_to_deseq2(day1_mech, ~ Treatment)
+dds = DESeq(dds, test="Wald", fitType="local")
+
+#Lists the coefficients/comparisons
+resultsNames(dds)
+
+#Results table of the desired comparison
+res <- results(dds, name="Treatment_Control_vs_Antibiotic") 
+
+#Results with significant p-values
+sigtab = res[which(res$pvalue<0.05), ]
+
+#Adding taxonomic names
+sigtab <- merge(day1_mech@tax_table,sigtab, by = 0)
+
+#Exporting significant results as a csv file (in case you have)
+write.table(sigtab, file="~/OneDrive - Michigan State University/Manning_lab/Mastitis_project/tables/diff_abundance/DESeq2/genes/deseq_mechanism_day1.csv",sep = ",") 
+```
+
+##Deseq2 Gene
+```{r}
+#Convering phyloseq-format into DESeqDataSet with dispersions estimated by treatment 
+dds <- phyloseq_to_deseq2(day1_gene, ~ Treatment)
+dds = DESeq(dds, test="Wald", fitType="local")
+
+#Lists the coefficients/comparisons
+resultsNames(dds)
+
+#Results table of the desired comparison
+res <- results(dds, name="Treatment_Control_vs_Antibiotic") 
+
+#Results with significant p-values
+sigtab = res[which(res$pvalue<0.05), ]
+
+#Adding taxonomic names
+sigtab <- merge(day1_gene@tax_table,sigtab, by = 0)
+
+#Exporting significant results as a csv file (in case you have)
+write.table(sigtab, file="~/OneDrive - Michigan State University/Manning_lab/Mastitis_project/tables/diff_abundance/DESeq2/genes/deseq_gene_day1.csv",sep = ",") 
+```
+
+##Deseq2 Name
+```{r}
+#Convering phyloseq-format into DESeqDataSet with dispersions estimated by treatment 
+dds <- phyloseq_to_deseq2(day1_name, ~ Treatment)
+dds = DESeq(dds, test="Wald", fitType="local")
+
+#Lists the coefficients/comparisons
+resultsNames(dds)
+
+#Results table of the desired comparison
+res <- results(dds, name="Treatment_Control_vs_Antibiotic") 
+
+#Results with significant p-values
+sigtab = res[which(res$pvalue<0.05), ]
+
+#Adding taxonomic names
+sigtab <- merge(day1_name@tax_table,sigtab, by = 0)
+
+#Exporting significant results as a csv file (in case you have)
+write.table(sigtab, file="~/OneDrive - Michigan State University/Manning_lab/Mastitis_project/tables/diff_abundance/DESeq2/genes/deseq_name_day1.csv",sep = ",") 
+```
+
+
+#WEEK 1
+##Aggregating abundances by rank
+```{r}
+week1_type <- tax_glom(physeq_week1, taxrank = 'Type')
+week1_class <- tax_glom(physeq_week1, taxrank = 'Class')
+week1_mech <- tax_glom(physeq_week1, taxrank = 'Mechanism')
+week1_gene <- tax_glom(physeq_week1, taxrank = 'Gene')
+week1_name <- tax_glom(physeq_week1, taxrank = 'Name')
+
+```
+##Deseq2 Type
+```{r}
+#Convering phyloseq-format into DESeqDataSet with dispersions estimated by treatment 
+dds <- phyloseq_to_deseq2(week1_type, ~ Treatment)
+dds = DESeq(dds, test="Wald", fitType="local")
+
+#Lists the coefficients/comparisons
+resultsNames(dds)
+
+#Results table of the desired comparison
+res <- results(dds, name="Treatment_Control_vs_Antibiotic") 
+
+#Results with significant p-values
+sigtab = res[which(res$pvalue<0.05), ]
+
+#Adding taxonomic names
+sigtab <- merge(week1_type@tax_table,sigtab, by = 0)
+
+#Exporting significant results as a csv file (in case you have)
+write.table(sigtab, file="~/OneDrive - Michigan State University/Manning_lab/Mastitis_project/tables/diff_abundance/DESeq2/genes/deseq_type_week1.csv",sep = ",") 
+```
+
+##Deseq2 Class
+```{r}
+#Convering phyloseq-format into DESeqDataSet with dispersions estimated by treatment 
+dds <- phyloseq_to_deseq2(week1_class, ~ Treatment)
+dds = DESeq(dds, test="Wald", fitType="local")
+
+#Lists the coefficients/comparisons
+resultsNames(dds)
+
+#Results table of the desired comparison
+res <- results(dds, name="Treatment_Control_vs_Antibiotic") 
+
+#Results with significant p-values
+sigtab = res[which(res$pvalue<0.05), ]
+
+#Adding taxonomic names
+sigtab <- merge(week1_class@tax_table,sigtab, by = 0)
+
+#Exporting significant results as a csv file (in case you have)
+write.table(sigtab, file="~/OneDrive - Michigan State University/Manning_lab/Mastitis_project/tables/diff_abundance/DESeq2/genes/deseq_class_week1.csv",sep = ",") 
+```
+
+##Deseq2 Mechanism
+```{r}
+#Convering phyloseq-format into DESeqDataSet with dispersions estimated by treatment 
+dds <- phyloseq_to_deseq2(week1_mech, ~ Treatment)
+dds = DESeq(dds, test="Wald", fitType="local")
+
+#Lists the coefficients/comparisons
+resultsNames(dds)
+
+#Results table of the desired comparison
+res <- results(dds, name="Treatment_Control_vs_Antibiotic") 
+
+#Results with significant p-values
+sigtab = res[which(res$pvalue<0.05), ]
+
+#Adding taxonomic names
+sigtab <- merge(week1_mech@tax_table,sigtab, by = 0)
+
+#Exporting significant results as a csv file (in case you have)
+write.table(sigtab, file="~/OneDrive - Michigan State University/Manning_lab/Mastitis_project/tables/diff_abundance/DESeq2/genes/deseq_mechanism_week1.csv",sep = ",") 
+```
+
+##Deseq2 Gene
+```{r}
+#Convering phyloseq-format into DESeqDataSet with dispersions estimated by treatment 
+dds <- phyloseq_to_deseq2(week1_gene, ~ Treatment)
+dds = DESeq(dds, test="Wald", fitType="local")
+
+#Lists the coefficients/comparisons
+resultsNames(dds)
+
+#Results table of the desired comparison
+res <- results(dds, name="Treatment_Control_vs_Antibiotic") 
+
+#Results with significant p-values
+sigtab = res[which(res$pvalue<0.05), ]
+
+#Adding taxonomic names
+sigtab <- merge(week1_gene@tax_table,sigtab, by = 0)
+
+#Exporting significant results as a csv file (in case you have)
+write.table(sigtab, file="~/OneDrive - Michigan State University/Manning_lab/Mastitis_project/tables/diff_abundance/DESeq2/genes/deseq_gene_week1.csv",sep = ",") 
+```
+
+##Deseq2 Name
+```{r}
+#Convering phyloseq-format into DESeqDataSet with dispersions estimated by treatment 
+dds <- phyloseq_to_deseq2(week1_name, ~ Treatment)
+dds = DESeq(dds, test="Wald", fitType="local")
+
+#Lists the coefficients/comparisons
+resultsNames(dds)
+
+#Results table of the desired comparison
+res <- results(dds, name="Treatment_Control_vs_Antibiotic") 
+
+#Results with significant p-values
+sigtab = res[which(res$pvalue<0.05), ]
+
+#Adding taxonomic names
+sigtab <- merge(week1_name@tax_table,sigtab, by = 0)
+
+#Exporting significant results as a csv file (in case you have)
+write.table(sigtab, file="~/OneDrive - Michigan State University/Manning_lab/Mastitis_project/tables/diff_abundance/DESeq2/genes/deseq_name_week1.csv",sep = ",") 
+```
+
+
+#WEEK 5
+```{r}
+week5_type <- tax_glom(physeq_week5, taxrank = 'Type')
+week5_class <- tax_glom(physeq_week5, taxrank = 'Class')
+week5_mech <- tax_glom(physeq_week5, taxrank = 'Mechanism')
+week5_gene <- tax_glom(physeq_week5, taxrank = 'Gene')
+week5_name <- tax_glom(physeq_week5, taxrank = 'Name')
+```
+
+##Deseq2 Type
+```{r}
+#Convering phyloseq-format into DESeqDataSet with dispersions estimated by treatment 
+dds <- phyloseq_to_deseq2(week5_type, ~ Treatment)
+dds = DESeq(dds, test="Wald", fitType="local")
+
+#Lists the coefficients/comparisons
+resultsNames(dds)
+
+#Results table of the desired comparison
+res <- results(dds, name="Treatment_Control_vs_Antibiotic") 
+
+#Results with significant p-values
+sigtab = res[which(res$pvalue<0.05), ]
+
+#Adding taxonomic names
+sigtab <- merge(week5_type@tax_table,sigtab, by = 0)
+
+#Exporting significant results as a csv file (in case you have)
+write.table(sigtab, file="~/OneDrive - Michigan State University/Manning_lab/Mastitis_project/tables/diff_abundance/DESeq2/genes/deseq_type_week5.csv",sep = ",") 
+```
+
+##Deseq2 Class
+```{r}
+#Convering phyloseq-format into DESeqDataSet with dispersions estimated by treatment 
+dds <- phyloseq_to_deseq2(week5_class, ~ Treatment)
+dds = DESeq(dds, test="Wald", fitType="local")
+
+#Lists the coefficients/comparisons
+resultsNames(dds)
+
+#Results table of the desired comparison
+res <- results(dds, name="Treatment_Control_vs_Antibiotic") 
+
+#Results with significant p-values
+sigtab = res[which(res$pvalue<0.05), ]
+
+#Adding taxonomic names
+sigtab <- merge(week5_class@tax_table,sigtab, by = 0)
+
+#Exporting significant results as a csv file (in case you have)
+write.table(sigtab, file="~/OneDrive - Michigan State University/Manning_lab/Mastitis_project/tables/diff_abundance/DESeq2/genes/deseq_class_week5.csv",sep = ",") 
+```
+
+##Deseq2 Mechanism
+```{r}
+#Convering phyloseq-format into DESeqDataSet with dispersions estimated by treatment 
+dds <- phyloseq_to_deseq2(week5_mech, ~ Treatment)
+dds = DESeq(dds, test="Wald", fitType="local")
+
+#Lists the coefficients/comparisons
+resultsNames(dds)
+
+#Results table of the desired comparison
+res <- results(dds, name="Treatment_Control_vs_Antibiotic") 
+
+#Results with significant p-values
+sigtab = res[which(res$pvalue<0.05), ]
+
+#Adding taxonomic names
+sigtab <- merge(week5_mech@tax_table,sigtab, by = 0)
+
+#Exporting significant results as a csv file (in case you have)
+write.table(sigtab, file="~/OneDrive - Michigan State University/Manning_lab/Mastitis_project/tables/diff_abundance/DESeq2/genes/deseq_mechanism_week5.csv",sep = ",") 
+```
+
+##Deseq2 Gene
+```{r}
+#Convering phyloseq-format into DESeqDataSet with dispersions estimated by treatment 
+dds <- phyloseq_to_deseq2(week5_gene, ~ Treatment)
+dds = DESeq(dds, test="Wald", fitType="local")
+
+#Lists the coefficients/comparisons
+resultsNames(dds)
+
+#Results table of the desired comparison
+res <- results(dds, name="Treatment_Control_vs_Antibiotic") 
+
+#Results with significant p-values
+sigtab = res[which(res$pvalue<0.05), ]
+
+#Adding taxonomic names
+sigtab <- merge(week5_gene@tax_table,sigtab, by = 0)
+
+#Exporting significant results as a csv file (in case you have)
+write.table(sigtab, file="~/OneDrive - Michigan State University/Manning_lab/Mastitis_project/tables/diff_abundance/DESeq2/genes/deseq_gene_week5.csv",sep = ",") 
+```
+
+##Deseq2 Name
+```{r}
+#Convering phyloseq-format into DESeqDataSet with dispersions estimated by treatment 
+dds <- phyloseq_to_deseq2(week5_name, ~ Treatment)
+dds = DESeq(dds, test="Wald", fitType="local")
+
+#Lists the coefficients/comparisons
+resultsNames(dds)
+
+#Results table of the desired comparison
+res <- results(dds, name="Treatment_Control_vs_Antibiotic") 
+
+#Results with significant p-values
+sigtab = res[which(res$pvalue<0.05), ]
+
+#Adding taxonomic names
+sigtab <- merge(week5_name@tax_table,sigtab, by = 0)
+
+#Exporting significant results as a csv file (in case you have)
+write.table(sigtab, file="~/OneDrive - Michigan State University/Manning_lab/Mastitis_project/tables/diff_abundance/DESeq2/genes/deseq_name_week5.csv",sep = ",") 
+```
+
+#WEEK 9
+##Aggregating abundances by rank
+```{r}
+week9_type <- tax_glom(physeq_week9, taxrank = 'Type')
+week9_class <- tax_glom(physeq_week9, taxrank = 'Class')
+week9_mech <- tax_glom(physeq_week9, taxrank = 'Mechanism')
+week9_gene <- tax_glom(physeq_week9, taxrank = 'Gene')
+week9_name <- tax_glom(physeq_week9, taxrank = 'Name')
+```
+
+##Deseq2 Type
+```{r}
+#Convering phyloseq-format into DESeqDataSet with dispersions estimated by treatment 
+dds <- phyloseq_to_deseq2(week9_type, ~ Treatment)
+dds = DESeq(dds, test="Wald", fitType="local")
+
+#Lists the coefficients/comparisons
+resultsNames(dds)
+
+#Results table of the desired comparison
+res <- results(dds, name="Treatment_Control_vs_Antibiotic") 
+
+#Results with significant p-values
+sigtab = res[which(res$pvalue<0.05), ]
+
+#Adding taxonomic names
+sigtab <- merge(week9_type@tax_table,sigtab, by = 0)
+
+#Exporting significant results as a csv file (in case you have)
+write.table(sigtab, file="~/OneDrive - Michigan State University/Manning_lab/Mastitis_project/tables/diff_abundance/DESeq2/genes/deseq_type_week9.csv",sep = ",") 
+```
+
+##Deseq2 Class
+```{r}
+#Convering phyloseq-format into DESeqDataSet with dispersions estimated by treatment 
+dds <- phyloseq_to_deseq2(week9_class, ~ Treatment)
+dds = DESeq(dds, test="Wald", fitType="local")
+
+#Lists the coefficients/comparisons
+resultsNames(dds)
+
+#Results table of the desired comparison
+res <- results(dds, name="Treatment_Control_vs_Antibiotic") 
+
+#Results with significant p-values
+sigtab = res[which(res$pvalue<0.05), ]
+
+#Adding taxonomic names
+sigtab <- merge(week9_class@tax_table,sigtab, by = 0)
+
+#Exporting significant results as a csv file (in case you have)
+write.table(sigtab, file="~/OneDrive - Michigan State University/Manning_lab/Mastitis_project/tables/diff_abundance/DESeq2/genes/deseq_class_week9.csv",sep = ",") 
+```
+
+##Deseq2 Mechanism
+```{r}
+#Convering phyloseq-format into DESeqDataSet with dispersions estimated by treatment 
+dds <- phyloseq_to_deseq2(week9_mech, ~ Treatment)
+dds = DESeq(dds, test="Wald", fitType="local")
+
+#Lists the coefficients/comparisons
+resultsNames(dds)
+
+#Results table of the desired comparison
+res <- results(dds, name="Treatment_Control_vs_Antibiotic") 
+
+#Results with significant p-values
+sigtab = res[which(res$pvalue<0.05), ]
+
+#Adding taxonomic names
+sigtab <- merge(week9_mech@tax_table,sigtab, by = 0)
+
+#Exporting significant results as a csv file (in case you have)
+write.table(sigtab, file="~/OneDrive - Michigan State University/Manning_lab/Mastitis_project/tables/diff_abundance/DESeq2/genes/deseq_mechanism_week9.csv",sep = ",") 
+```
+
+##Deseq2 Gene
+```{r}
+#Convering phyloseq-format into DESeqDataSet with dispersions estimated by treatment 
+dds <- phyloseq_to_deseq2(week9_gene, ~ Treatment)
+dds = DESeq(dds, test="Wald", fitType="local")
+
+#Lists the coefficients/comparisons
+resultsNames(dds)
+
+#Results table of the desired comparison
+res <- results(dds, name="Treatment_Control_vs_Antibiotic") 
+
+#Results with significant p-values
+sigtab = res[which(res$pvalue<0.05), ]
+
+#Adding taxonomic names
+sigtab <- merge(week9_gene@tax_table,sigtab, by = 0)
+
+#Exporting significant results as a csv file (in case you have)
+write.table(sigtab, file="~/OneDrive - Michigan State University/Manning_lab/Mastitis_project/tables/diff_abundance/DESeq2/genes/deseq_gene_week9.csv",sep = ",") 
+```
+
+##Deseq2 Name
+```{r}
+#Convering phyloseq-format into DESeqDataSet with dispersions estimated by treatment 
+dds <- phyloseq_to_deseq2(week9_name, ~ Treatment)
+dds = DESeq(dds, test="Wald", fitType="local")
+
+#Lists the coefficients/comparisons
+resultsNames(dds)
+
+#Results table of the desired comparison
+res <- results(dds, name="Treatment_Control_vs_Antibiotic") 
+
+#Results with significant p-values
+sigtab = res[which(res$pvalue<0.05), ]
+
+#Adding taxonomic names
+sigtab <- merge(week9_name@tax_table,sigtab, by = 0)
+
+#Exporting significant results as a csv file (in case you have)
+write.table(sigtab, file="~/OneDrive - Michigan State University/Manning_lab/Mastitis_project/tables/diff_abundance/DESeq2/genes/deseq_name_week9.csv",sep = ",") 
+```

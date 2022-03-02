@@ -1,0 +1,115 @@
+---
+title: "R Notebook"
+output:
+  html_document:
+    df_print: paged
+---
+
+##Importing tables
+```{r}
+setwd("~/OneDrive\ -\ Michigan\ State\ University/Manning_lab/Mastitis_project/GitHub/data/")
+library(dplyr)
+
+#read in otu table
+otu_table = read.csv("feature_table_taxa.csv",sep=",", check.names = F)
+otu_table <- otu_table %>% 
+  group_by(OTU_ID) %>% 
+  dplyr::summarise(across(everything(), sum))
+
+library(tibble)
+otu_table <- otu_table %>% remove_rownames %>% column_to_rownames(var = "OTU_ID")
+otu_table=as.matrix(otu_table)
+
+
+#read in taxonomy
+taxonomy = read.csv("taxonomy_taxa.csv",sep=",")
+taxonomy <-taxonomy %>% distinct(OTU_ID, .keep_all = TRUE)
+taxonomy <- taxonomy %>% remove_rownames %>% column_to_rownames(var = "OTU_ID")
+taxonomy=as.matrix(taxonomy)
+
+#read in metadata
+metadata=read.table("metadata.csv", sep = ",", header = TRUE, row.names=1, na.strings = "") 
+metadata
+```
+
+##Generating a phyloseq object
+```{r}
+library("phyloseq")
+
+#import as phyloseq objects
+OTU = otu_table(otu_table,taxa_are_rows=TRUE)
+TAX = tax_table(taxonomy)
+META = sample_data(metadata)
+
+# Sanity checks for consistent OTU names
+taxa_names(TAX)
+taxa_names(OTU)
+
+# Same sample names
+sample_names(OTU)
+sample_names(META)
+
+#Final phyloseq output is named as physeq
+physeq=phyloseq(OTU,TAX,META)
+```
+
+##Filtering taxa
+```{r}
+library(dplyr)
+`%notin%` <- Negate(`%in%`)
+#Filtering chloroplasts and mitocondria
+physeq <-  physeq %>% subset_taxa(Order %notin% "Chloroplast", Family %notin% "Mitochondria")
+
+#Aggregating abundances at the Family level
+physeq_family <- tax_glom(physeq, taxrank = 'Family')
+physeq <- physeq_family
+```
+
+#Transforming counts to percentage
+```{r}
+#To plot the tolal counts as percentage in the heat tree, divide the sum of the counts by the number of samples and multiply by 100. Here, I have 159 samples.
+physeq_t  = transform_sample_counts(physeq, function(x) x / sum(x)/159*100 ) 
+
+#Filter all the taxa that have a percentage higher than 0.0001. This is optional, but I prefer to plot the most abundant taxa
+physeq_t1 = phyloseq::filter_taxa(physeq_t, function(x) mean(x) > 1e-5, TRUE) 
+physeq_t1 <-  physeq_t1 %>% subset_taxa(Kingdom %in% "Bacteria")
+```
+
+#Metacoder
+```{r}
+library(metacoder)
+
+#transforming physeq object into a metacoder object
+metacoder_object = parse_phyloseq(physeq_t1) 
+
+#creating a column with total counts. Keep as is
+metacoder_object$data$taxon_counts <- calc_taxon_abund(metacoder_object, data = "otu_table") 
+
+metacoder_object$data$taxon_counts$total <- rowSums(metacoder_object$data$taxon_counts[, -1]) # -1 = taxon_id column
+
+metacoder_object$data$taxon_prop <- calc_obs_props(metacoder_object, "otu_table")
+```
+#Heat tree
+```{r}
+#Plotting heat-tree
+heat_tree = metacoder_object %>%
+  # subset to the class rank
+  heat_tree(node_label = taxon_names,
+            node_size = metacoder_object$data$taxon_counts$total,
+         #   node_size_range = c(0.01, 0.5),
+          #  edge_size_range = c(0.001, 0.005),
+            node_label_size_range = c(0.007, 0.03),
+         node_color = metacoder_object$data$taxon_counts$total,
+
+            node_color_axis_label = "Proportion",
+            node_size_axis_label = "Gene count",
+            overlap_avoidance =1) #Modify if necssary
+heat_tree
+```
+#Saving figure in my directory
+```{r}
+setwd("~/OneDrive\ -\ Michigan\ State\ University/Manning_lab/Mastitis_project/figures/composition") 
+
+library(ggplot2)
+ggsave(plot = heat_tree, "heat-tree_bacteria.png", height = 9, width = 11)
+```

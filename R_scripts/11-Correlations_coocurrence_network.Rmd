@@ -1,0 +1,972 @@
+---
+title: "R Notebook"
+output:
+  html_document:
+    df_print: paged
+---
+#CO-OCURRENCE NETWORK TABLES TO ANALYZE IN GEPHI
+
+#Importing abundance tables and metadata
+```{r}
+setwd("~/OneDrive\ -\ Michigan\ State\ University/Manning_lab/Mastitis_project/GitHub/data/")
+#Importing metadata
+metadata =read.table("metadata.csv", sep = ",", header = TRUE,  na.strings = "") 
+
+#Importing abundance table
+virulence <- read.table("abundance_virulence_abs_COSMOS-ID.tsv", sep = "\t", header = TRUE,  na.strings = "", check.names = F) 
+
+ARGs <- read.table("abundance_ARGs_abs_COSMOS-ID.tsv", sep = "\t", header = TRUE,  na.strings = "", check.names = F) 
+
+Phages <- read.table("abundance_phages_abs_COSMOS-ID.tsv", sep = "\t", header = TRUE,  na.strings = "", check.names = F) 
+
+taxa <- read.table("abundance_taxa_genus_abs_COSMOS-ID.csv", sep = ",", header = TRUE,  na.strings = "", check.names = F) 
+
+taxa_fam_gn <- read.table("abundance_taxa_genuswithfamily_abs_COSMOS-ID.csv", sep = ",", header = TRUE,  na.strings = "", check.names = F)
+```
+
+#Formating tables to merge with metadata
+```{r}
+library(tibble)
+library(dplyr)
+#Creating an object that only includes the columns with virulence gene names and sample abundances
+virulence_genes <- virulence %>% 
+  select(Gene, 7:ncol(virulence)) 
+
+#Transposing table and set the first row as column names
+virulence_genes <-  setNames(data.frame(t(virulence_genes[,-1])), virulence_genes[,1]) 
+
+#setting the row names as a column named "Name", so I can merge this table with the metadata by that variable 
+virulence_genes <- tibble::rownames_to_column(virulence_genes, var = "Name") %>%
+  as_tibble() 
+
+#Creating an object that only includes the columns with ARGs and sample abundances
+ARGs_genes <- ARGs %>% 
+  select(ARG, 6:ncol(ARGs))
+
+#Transposing table and set the first row as column names
+ARGs_genes <-  setNames(data.frame(t(ARGs_genes[,-1])), ARGs_genes[,1]) 
+
+#setting the row names as a column named "Name", so I can merge this table with the metadata by that variable 
+ARGs_genes <- tibble::rownames_to_column(ARGs_genes, var = "Name") %>% as_tibble() 
+
+#Creating an object that only includes the columns with Phage species and sample abundances
+Phages_sp <- Phages %>% 
+  select(Species, 9:ncol(Phages)) 
+
+#Transposing table and set the first row as column names
+Phages_sp <-  setNames(data.frame(t(Phages_sp[,-1])), Phages_sp[,1]) 
+
+#setting the row names as a column named "Name", so I can merge this table with the metadata by that variable 
+Phages_sp <- rownames_to_column(Phages_sp, var = "Name") %>%   as_tibble() 
+```
+
+#Merging tables
+```{r}
+#Merging the transposed abundance tables with my metadata
+meta_viru<- merge(metadata,virulence_genes, by="Name")
+meta_viru_args <- merge(meta_viru,ARGs_genes, by="Name")
+meta_viru_args_phages <- merge(meta_viru_args,Phages_sp, by="Name")
+meta_taxa <- merge(meta_viru_args_phages,taxa, by="Name")
+```
+
+#DAY -1
+##CONTROL GROUP
+
+###Nodes
+This table will have information about the nodes like type (ARG, phage, virulence, taxa), class (family for taxa and phages), gene (genus for taxa and phages), and abundance.
+```{r}
+#Creating vector that includes the names of samples from the control group
+
+##First, create a data frame with the sequencing names that correspond to the column/sample names in the ARG, virulence and phage files
+samples <- meta_taxa %>% 
+  filter(Treatment == "Control", sampling == "1") %>% 
+  select(Name)
+
+#Creating the node's data frame that includes the columns: Type, Class, Gene, and Abundance, and that only includes samples from the desired time point
+
+ARGs_nodes <-  ARGs %>%
+  select(Drug_Class, Gene, ARG, samples$Name) %>% #selecting the specified columns and the samples previously filtered
+  mutate(Abundance = rowSums(.[samples$Name])) %>% #Numbers correspond to columns that include samples
+  mutate(Type = "ARG") %>% #Adding a column with gene/taxa type
+  dplyr::rename(Class = Drug_Class) %>% #Rename is to standardize the column names, so we can join the the data frames
+  dplyr::rename(Gene_name = Gene) %>% #Rename is to standardize the column names, so we can join the the data frames
+  dplyr::rename(Gene = ARG) %>% #Rename is to standardize the column names, so we can join the the data frames
+  select(Type, Class, Gene, Abundance) #Re-ordering the columns
+
+virulence_nodes <-  virulence %>% 
+  select(Type, Function, Gene, samples$Name) %>% 
+  mutate(Abundance = rowSums(.[samples$Name]))  %>% 
+  dplyr::rename(Class = Function) %>% 
+  select(Type, Class, Gene, Abundance) %>% 
+  mutate(Type = recode(Type, `Nutrient intake` = "Virulence", Unknown = "Virulence",`Environmental stress protection` = "Virulence", Invasion = "Virulence")) #Changing all virulence gene type names to "Virulence"
+
+phages_nodes <-  Phages %>% 
+  select(Family, Species, samples$Name) %>% 
+  mutate(Abundance = rowSums(.[samples$Name]))  %>% 
+  mutate(Type = "Phage") %>% 
+  select(Type, Family, Species, Abundance) %>% 
+  dplyr::rename(Class = Family, Gene = Species)
+
+taxa_nodes <- taxa_fam_gn %>% 
+  select(Family, Genus, samples$Name) %>% 
+  mutate(Abundance = rowSums(.[samples$Name]))  %>% 
+  mutate(Type = "Taxa") %>% 
+  select(Type, Family, Genus, Abundance) %>% 
+  dplyr::rename(Class = Family, Gene = Genus)
+
+#Joining my data frames
+nodes <-ARGs_nodes %>% 
+  dplyr::union(virulence_nodes) %>% 
+  dplyr::union(phages_nodes) %>% 
+  dplyr::union(taxa_nodes)
+
+#Formating for Gephi
+nodes <- nodes %>% 
+  mutate(id = 1:nrow(nodes)) %>% #Number correspond to the number of observations in nodes table
+  mutate(Label = Gene) %>% #Changing name of column Gene for Label, which is going to be the label observed in the network
+  select(Label, id, Abundance, everything()) #Reordering columns
+
+#Saving final file as csv
+write.csv(nodes, "~/OneDrive\ -\ Michigan\ State\ University/Manning_lab/Mastitis_project/GitHub/data/networks/day1_control_nodes.csv", row.names = F)
+```
+
+
+###Edges
+```{r}
+#Making an abundance matrix that exclude the metadata and only include genes/taxa abundances
+abundance_matrix <- meta_taxa %>% 
+  filter(Treatment == "Control", sampling == "1") %>% #filtering samples from control group on a given time point
+  select(-one_of(colnames(metadata))) #select all columns except the ones found in the metadata
+
+abundance_matrix[is.na(abundance_matrix)] <- 0 #converting NAs to 0 to calculate correlations
+
+
+library(Hmisc)
+#Calculating correlations
+correlations <-rcorr(as.matrix(abundance_matrix))
+
+#Function to change correlation table format
+flattenCorrMatrix <- function(cormat, pmat) {
+  ut <- upper.tri(cormat)
+  data.frame(
+    row = rownames(cormat)[row(cormat)[ut]],
+    column = rownames(cormat)[col(cormat)[ut]],
+    cor  =(cormat)[ut],
+    p = pmat[ut]
+    )
+}
+
+edges = flattenCorrMatrix(correlations$r, correlations$P)
+
+#Renaming columns, adding correlation type, and filtering correlations higher than 0.75
+edges <- edges %>% 
+  dplyr::rename(Label = row, Target = column, Correlation = cor) %>% #Labels required in Gephi
+  mutate(Type = "undirected") %>% #This column is required in Gephi, tells the direction of the relationship between nodes
+  filter(Correlation >= 0.75, p <= 0.05) #Filtering significant correlations
+
+#Changing labels for id numbers (corresponding to node id). This is the format that Gephi requires
+edges_source_numbers <- left_join(edges,nodes, by = "Label") %>%
+  dplyr::rename(Source = id) %>% 
+  select(Source, Target, Correlation, Type.x) %>% 
+  dplyr::rename(Label = Target)
+
+edges_target_source_numbers <- left_join(edges_source_numbers,nodes, by = "Label") %>% 
+  select(Source, id, Correlation, Type.x) %>% 
+  dplyr::rename(Target = id, Type = Type.x)
+
+#Saving edges files as csv
+
+#Edge table with node labels (just for reference)
+write.csv(edges, "~/OneDrive\ -\ Michigan\ State\ University/Manning_lab/Mastitis_project/GitHub/data/networks/day1_control_edges_labels.csv", row.names = F)
+
+#Edge table with node numbers (the one to use in Gephi)
+write.csv(edges_target_source_numbers, "~/OneDrive\ -\ Michigan\ State\ University/Manning_lab/Mastitis_project/GitHub/data/networks/day1_control_edges_gephi.csv", row.names = F)
+```
+
+##ANTIBIOTIC GROUP
+###Nodes
+This table will have information about the nodes like type (ARG, phage, virulence, taxa), class (family for taxa and phages), gene (genus for taxa and phages), and abundance.
+```{r}
+#Creating vector that includes the names of samples from the control group
+
+##First, create a data frame with the sequencing names that correspond to the column/sample names in the ARG, virulence and phage files
+samples <- meta_taxa %>% 
+  filter(Treatment == "Antibiotic", sampling == "1") %>% 
+  select(Name)
+
+#Creating the node's data frame that includes the columns: Type, Class, Gene, and Abundance, and that only includes samples from the desired time point
+
+ARGs_nodes <-  ARGs %>%
+  select(Drug_Class, Gene, ARG, samples$Name) %>% #selecting the specified columns and the samples previously filtered
+  mutate(Abundance = rowSums(.[samples$Name])) %>% #Numbers correspond to columns that include samples
+  mutate(Type = "ARG") %>% #Adding a column with gene/taxa type
+  dplyr::rename(Class = Drug_Class) %>% #Rename is to standardize the column names, so we can join the the data frames
+  dplyr::rename(Gene_name = Gene) %>% #Rename is to standardize the column names, so we can join the the data frames
+  dplyr::rename(Gene = ARG) %>% #Rename is to standardize the column names, so we can join the the data frames
+  select(Type, Class, Gene, Abundance) #Re-ordering the columns
+
+virulence_nodes <-  virulence %>% 
+  select(Type, Function, Gene, samples$Name) %>% 
+  mutate(Abundance = rowSums(.[samples$Name]))  %>% 
+  dplyr::rename(Class = Function) %>% 
+  select(Type, Class, Gene, Abundance) %>% 
+  mutate(Type = recode(Type, `Nutrient intake` = "Virulence", Unknown = "Virulence",`Environmental stress protection` = "Virulence", Invasion = "Virulence")) #Changing all virulence gene type names to "Virulence"
+
+phages_nodes <-  Phages %>% 
+  select(Family, Species, samples$Name) %>% 
+  mutate(Abundance = rowSums(.[samples$Name]))  %>% 
+  mutate(Type = "Phage") %>% 
+  select(Type, Family, Species, Abundance) %>% 
+  dplyr::rename(Class = Family, Gene = Species)
+
+taxa_nodes <- taxa_fam_gn %>% 
+  select(Family, Genus, samples$Name) %>% 
+  mutate(Abundance = rowSums(.[samples$Name]))  %>% 
+  mutate(Type = "Taxa") %>% 
+  select(Type, Family, Genus, Abundance) %>% 
+  dplyr::rename(Class = Family, Gene = Genus)
+
+#Joining my data frames
+nodes <-ARGs_nodes %>% 
+  dplyr::union(virulence_nodes) %>% 
+  dplyr::union(phages_nodes) %>% 
+  dplyr::union(taxa_nodes)
+
+#Formating for Gephi
+nodes <- nodes %>% 
+  mutate(id = 1:nrow(nodes)) %>% #Number correspond to the number of observations in nodes table
+  mutate(Label = Gene) %>% #Changing name of column Gene for Label, which is going to be the label observed in the network
+  select(Label, id, Abundance, everything()) #Reordering columns
+
+#Saving final file as csv
+write.csv(nodes, "~/OneDrive\ -\ Michigan\ State\ University/Manning_lab/Mastitis_project/GitHub/data/networks/day1_antibiotic_nodes.csv", row.names = F)
+```
+
+
+###Edges
+```{r}
+#Making an abundance matrix that exclude the metadata and only include genes/taxa abundances
+abundance_matrix <- meta_taxa %>% 
+  filter(Treatment == "Antibiotic", sampling == "1") %>% #filtering samples from control group on a given time point
+  select(-one_of(colnames(metadata))) #select all columns except the ones found in the metadata
+
+abundance_matrix[is.na(abundance_matrix)] <- 0 #converting NAs to 0 to calculate correlations
+
+
+library(Hmisc)
+#Calculating correlations
+correlations <-rcorr(as.matrix(abundance_matrix))
+
+#Function to change correlation table format
+flattenCorrMatrix <- function(cormat, pmat) {
+  ut <- upper.tri(cormat)
+  data.frame(
+    row = rownames(cormat)[row(cormat)[ut]],
+    column = rownames(cormat)[col(cormat)[ut]],
+    cor  =(cormat)[ut],
+    p = pmat[ut]
+    )
+}
+
+edges = flattenCorrMatrix(correlations$r, correlations$P)
+
+#Renaming columns, adding correlation type, and filtering correlations higher than 0.75
+edges <- edges %>% 
+  dplyr::rename(Label = row, Target = column, Correlation = cor) %>% #Labels required in Gephi
+  mutate(Type = "undirected") %>% #This column is required in Gephi, tells the direction of the relationship between nodes
+  filter(Correlation >= 0.75, p <= 0.05) #Filtering significant correlations
+
+#Changing labels for id numbers (corresponding to node id). This is the format that Gephi requires
+edges_source_numbers <- left_join(edges,nodes, by = "Label") %>%
+  dplyr::rename(Source = id) %>% 
+  select(Source, Target, Correlation, Type.x) %>% 
+  dplyr::rename(Label = Target)
+
+edges_target_source_numbers <- left_join(edges_source_numbers,nodes, by = "Label") %>% 
+  select(Source, id, Correlation, Type.x) %>% 
+  dplyr::rename(Target = id, Type = Type.x)
+
+#Saving edges files as csv
+
+#Edge table with node labels (just for reference)
+write.csv(edges, "~/OneDrive\ -\ Michigan\ State\ University/Manning_lab/Mastitis_project/GitHub/data/networks/day1_antibiotic_edges_labels.csv", row.names = F)
+
+#Edge table with node numbers (the one to use in Gephi)
+write.csv(edges_target_source_numbers, "~/OneDrive\ -\ Michigan\ State\ University/Manning_lab/Mastitis_project/GitHub/data/networks/day1_antibiotic_edges_gephi.csv", row.names = F)
+```
+
+
+#WEEK 1
+##CONTROL GROUP
+###Nodes
+This table will have information about the nodes like type (ARG, phage, virulence, taxa), class (family for taxa and phages), gene (genus for taxa and phages), and abundance.
+```{r}
+#Creating vector that includes the names of samples from the control group
+
+##First, create a data frame with the sequencing names that correspond to the column/sample names in the ARG, virulence and phage files
+samples <- meta_taxa %>% 
+  filter(Treatment == "Control", sampling == "2") %>% 
+  select(Name)
+
+#Creating the node's data frame that includes the columns: Type, Class, Gene, and Abundance, and that only includes samples from the desired time point
+
+ARGs_nodes <-  ARGs %>%
+  select(Drug_Class, Gene, ARG, samples$Name) %>% #selecting the specified columns and the samples previously filtered
+  mutate(Abundance = rowSums(.[samples$Name])) %>% #Numbers correspond to columns that include samples
+  mutate(Type = "ARG") %>% #Adding a column with gene/taxa type
+  dplyr::rename(Class = Drug_Class) %>% #Rename is to standardize the column names, so we can join the the data frames
+  dplyr::rename(Gene_name = Gene) %>% #Rename is to standardize the column names, so we can join the the data frames
+  dplyr::rename(Gene = ARG) %>% #Rename is to standardize the column names, so we can join the the data frames
+  select(Type, Class, Gene, Abundance) #Re-ordering the columns
+
+virulence_nodes <-  virulence %>% 
+  select(Type, Function, Gene, samples$Name) %>% 
+  mutate(Abundance = rowSums(.[samples$Name]))  %>% 
+  dplyr::rename(Class = Function) %>% 
+  select(Type, Class, Gene, Abundance) %>% 
+  mutate(Type = recode(Type, `Nutrient intake` = "Virulence", Unknown = "Virulence",`Environmental stress protection` = "Virulence", Invasion = "Virulence")) #Changing all virulence gene type names to "Virulence"
+
+phages_nodes <-  Phages %>% 
+  select(Family, Species, samples$Name) %>% 
+  mutate(Abundance = rowSums(.[samples$Name]))  %>% 
+  mutate(Type = "Phage") %>% 
+  select(Type, Family, Species, Abundance) %>% 
+  dplyr::rename(Class = Family, Gene = Species)
+
+taxa_nodes <- taxa_fam_gn %>% 
+  select(Family, Genus, samples$Name) %>% 
+  mutate(Abundance = rowSums(.[samples$Name]))  %>% 
+  mutate(Type = "Taxa") %>% 
+  select(Type, Family, Genus, Abundance) %>% 
+  dplyr::rename(Class = Family, Gene = Genus)
+
+#Joining my data frames
+nodes <-ARGs_nodes %>% 
+  dplyr::union(virulence_nodes) %>% 
+  dplyr::union(phages_nodes) %>% 
+  dplyr::union(taxa_nodes)
+
+#Formating for Gephi
+nodes <- nodes %>% 
+  mutate(id = 1:nrow(nodes)) %>% #Number correspond to the number of observations in nodes table
+  mutate(Label = Gene) %>% #Changing name of column Gene for Label, which is going to be the label observed in the network
+  select(Label, id, Abundance, everything()) #Reordering columns
+
+#Saving final file as csv
+write.csv(nodes, "~/OneDrive\ -\ Michigan\ State\ University/Manning_lab/Mastitis_project/GitHub/data/networks/week1_control_nodes.csv", row.names = F)
+```
+
+###Edges
+```{r}
+#Making an abundance matrix that exclude the metadata and only include genes/taxa abundances
+abundance_matrix <- meta_taxa %>% 
+  filter(Treatment == "Control", sampling == "2") %>% #filtering samples from control group on a given time point
+  select(-one_of(colnames(metadata))) #select all columns except the ones found in the metadata
+
+abundance_matrix[is.na(abundance_matrix)] <- 0 #converting NAs to 0 to calculate correlations
+
+
+library(Hmisc)
+#Calculating correlations
+correlations <-rcorr(as.matrix(abundance_matrix))
+
+#Function to change correlation table format
+flattenCorrMatrix <- function(cormat, pmat) {
+  ut <- upper.tri(cormat)
+  data.frame(
+    row = rownames(cormat)[row(cormat)[ut]],
+    column = rownames(cormat)[col(cormat)[ut]],
+    cor  =(cormat)[ut],
+    p = pmat[ut]
+    )
+}
+
+edges = flattenCorrMatrix(correlations$r, correlations$P)
+
+#Renaming columns, adding correlation type, and filtering correlations higher than 0.75
+edges <- edges %>% 
+  dplyr::rename(Label = row, Target = column, Correlation = cor) %>% #Labels required in Gephi
+  mutate(Type = "undirected") %>% #This column is required in Gephi, tells the direction of the relationship between nodes
+  filter(Correlation >= 0.75, p <= 0.05) #Filtering significant correlations
+
+#Changing labels for id numbers (corresponding to node id). This is the format that Gephi requires
+edges_source_numbers <- left_join(edges,nodes, by = "Label") %>%
+  dplyr::rename(Source = id) %>% 
+  select(Source, Target, Correlation, Type.x) %>% 
+  dplyr::rename(Label = Target)
+
+edges_target_source_numbers <- left_join(edges_source_numbers,nodes, by = "Label") %>% 
+  select(Source, id, Correlation, Type.x) %>% 
+  dplyr::rename(Target = id, Type = Type.x)
+
+#Saving edges files as csv
+
+#Edge table with node labels (just for reference)
+write.csv(edges, "~/OneDrive\ -\ Michigan\ State\ University/Manning_lab/Mastitis_project/GitHub/data/networks/week1_control_edges_labels.csv", row.names = F)
+
+#Edge table with node numbers (the one to use in Gephi)
+write.csv(edges_target_source_numbers, "~/OneDrive\ -\ Michigan\ State\ University/Manning_lab/Mastitis_project/GitHub/data/networks/week1_control_edges_gephi.csv", row.names = F)
+```
+
+
+##ANTIBIOTIC GROUP
+###Nodes
+This table will have information about the nodes like type (ARG, phage, virulence, taxa), class (family for taxa and phages), gene (genus for taxa and phages), and abundance.
+```{r}
+#Creating vector that includes the names of samples from the control group
+
+##First, create a data frame with the sequencing names that correspond to the column/sample names in the ARG, virulence and phage files
+samples <- meta_taxa %>% 
+  filter(Treatment == "Antibiotic", sampling == "2") %>% 
+  select(Name)
+
+#Creating the node's data frame that includes the columns: Type, Class, Gene, and Abundance, and that only includes samples from the desired time point
+
+ARGs_nodes <-  ARGs %>%
+  select(Drug_Class, Gene, ARG, samples$Name) %>% #selecting the specified columns and the samples previously filtered
+  mutate(Abundance = rowSums(.[samples$Name])) %>% #Numbers correspond to columns that include samples
+  mutate(Type = "ARG") %>% #Adding a column with gene/taxa type
+  dplyr::rename(Class = Drug_Class) %>% #Rename is to standardize the column names, so we can join the the data frames
+  dplyr::rename(Gene_name = Gene) %>% #Rename is to standardize the column names, so we can join the the data frames
+  dplyr::rename(Gene = ARG) %>% #Rename is to standardize the column names, so we can join the the data frames
+  select(Type, Class, Gene, Abundance) #Re-ordering the columns
+
+virulence_nodes <-  virulence %>% 
+  select(Type, Function, Gene, samples$Name) %>% 
+  mutate(Abundance = rowSums(.[samples$Name]))  %>% 
+  dplyr::rename(Class = Function) %>% 
+  select(Type, Class, Gene, Abundance) %>% 
+  mutate(Type = recode(Type, `Nutrient intake` = "Virulence", Unknown = "Virulence",`Environmental stress protection` = "Virulence", Invasion = "Virulence")) #Changing all virulence gene type names to "Virulence"
+
+phages_nodes <-  Phages %>% 
+  select(Family, Species, samples$Name) %>% 
+  mutate(Abundance = rowSums(.[samples$Name]))  %>% 
+  mutate(Type = "Phage") %>% 
+  select(Type, Family, Species, Abundance) %>% 
+  dplyr::rename(Class = Family, Gene = Species)
+
+taxa_nodes <- taxa_fam_gn %>% 
+  select(Family, Genus, samples$Name) %>% 
+  mutate(Abundance = rowSums(.[samples$Name]))  %>% 
+  mutate(Type = "Taxa") %>% 
+  select(Type, Family, Genus, Abundance) %>% 
+  dplyr::rename(Class = Family, Gene = Genus)
+
+#Joining my data frames
+nodes <-ARGs_nodes %>% 
+  dplyr::union(virulence_nodes) %>% 
+  dplyr::union(phages_nodes) %>% 
+  dplyr::union(taxa_nodes)
+
+#Formating for Gephi
+nodes <- nodes %>% 
+  mutate(id = 1:nrow(nodes)) %>% #Number correspond to the number of observations in nodes table
+  mutate(Label = Gene) %>% #Changing name of column Gene for Label, which is going to be the label observed in the network
+  select(Label, id, Abundance, everything()) #Reordering columns
+
+#Saving final file as csv
+write.csv(nodes, "~/OneDrive\ -\ Michigan\ State\ University/Manning_lab/Mastitis_project/GitHub/data/networks/week1_antibiotic_nodes.csv", row.names = F)
+```
+###Edges
+```{r}
+#Making an abundance matrix that exclude the metadata and only include genes/taxa abundances
+abundance_matrix <- meta_taxa %>% 
+  filter(Treatment == "Antibiotic", sampling == "2") %>% #filtering samples from control group on a given time point
+  select(-one_of(colnames(metadata))) #select all columns except the ones found in the metadata
+
+abundance_matrix[is.na(abundance_matrix)] <- 0 #converting NAs to 0 to calculate correlations
+
+
+library(Hmisc)
+#Calculating correlations
+correlations <-rcorr(as.matrix(abundance_matrix))
+
+#Function to change correlation table format
+flattenCorrMatrix <- function(cormat, pmat) {
+  ut <- upper.tri(cormat)
+  data.frame(
+    row = rownames(cormat)[row(cormat)[ut]],
+    column = rownames(cormat)[col(cormat)[ut]],
+    cor  =(cormat)[ut],
+    p = pmat[ut]
+    )
+}
+
+edges = flattenCorrMatrix(correlations$r, correlations$P)
+
+#Renaming columns, adding correlation type, and filtering correlations higher than 0.75
+edges <- edges %>% 
+  dplyr::rename(Label = row, Target = column, Correlation = cor) %>% #Labels required in Gephi
+  mutate(Type = "undirected") %>% #This column is required in Gephi, tells the direction of the relationship between nodes
+  filter(Correlation >= 0.75, p <= 0.05) #Filtering significant correlations
+
+#Changing labels for id numbers (corresponding to node id). This is the format that Gephi requires
+edges_source_numbers <- left_join(edges,nodes, by = "Label") %>%
+  dplyr::rename(Source = id) %>% 
+  select(Source, Target, Correlation, Type.x) %>% 
+  dplyr::rename(Label = Target)
+
+edges_target_source_numbers <- left_join(edges_source_numbers,nodes, by = "Label") %>% 
+  select(Source, id, Correlation, Type.x) %>% 
+  dplyr::rename(Target = id, Type = Type.x)
+
+#Saving edges files as csv
+
+#Edge table with node labels (just for reference)
+write.csv(edges, "~/OneDrive\ -\ Michigan\ State\ University/Manning_lab/Mastitis_project/GitHub/data/networks/week1_antibiotic_edges_labels.csv", row.names = F)
+
+#Edge table with node numbers (the one to use in Gephi)
+write.csv(edges_target_source_numbers, "~/OneDrive\ -\ Michigan\ State\ University/Manning_lab/Mastitis_project/GitHub/data/networks/week1_antibiotic_edges_gephi.csv", row.names = F)
+```
+
+
+#WEEK 5
+##CONTROL GROUP
+###Nodes
+This table will have information about the nodes like type (ARG, phage, virulence, taxa), class (family for taxa and phages), gene (genus for taxa and phages), and abundance.
+```{r}
+#Creating vector that includes the names of samples from the control group
+
+##First, create a data frame with the sequencing names that correspond to the column/sample names in the ARG, virulence and phage files
+samples <- meta_taxa %>% 
+  filter(Treatment == "Control", sampling == "5") %>% 
+  select(Name)
+
+#Creating the node's data frame that includes the columns: Type, Class, Gene, and Abundance, and that only includes samples from the desired time point
+
+ARGs_nodes <-  ARGs %>%
+  select(Drug_Class, Gene, ARG, samples$Name) %>% #selecting the specified columns and the samples previously filtered
+  mutate(Abundance = rowSums(.[samples$Name])) %>% #Numbers correspond to columns that include samples
+  mutate(Type = "ARG") %>% #Adding a column with gene/taxa type
+  dplyr::rename(Class = Drug_Class) %>% #Rename is to standardize the column names, so we can join the the data frames
+  dplyr::rename(Gene_name = Gene) %>% #Rename is to standardize the column names, so we can join the the data frames
+  dplyr::rename(Gene = ARG) %>% #Rename is to standardize the column names, so we can join the the data frames
+  select(Type, Class, Gene, Abundance) #Re-ordering the columns
+
+virulence_nodes <-  virulence %>% 
+  select(Type, Function, Gene, samples$Name) %>% 
+  mutate(Abundance = rowSums(.[samples$Name]))  %>% 
+  dplyr::rename(Class = Function) %>% 
+  select(Type, Class, Gene, Abundance) %>% 
+  mutate(Type = recode(Type, `Nutrient intake` = "Virulence", Unknown = "Virulence",`Environmental stress protection` = "Virulence", Invasion = "Virulence")) #Changing all virulence gene type names to "Virulence"
+
+phages_nodes <-  Phages %>% 
+  select(Family, Species, samples$Name) %>% 
+  mutate(Abundance = rowSums(.[samples$Name]))  %>% 
+  mutate(Type = "Phage") %>% 
+  select(Type, Family, Species, Abundance) %>% 
+  dplyr::rename(Class = Family, Gene = Species)
+
+taxa_nodes <- taxa_fam_gn %>% 
+  select(Family, Genus, samples$Name) %>% 
+  mutate(Abundance = rowSums(.[samples$Name]))  %>% 
+  mutate(Type = "Taxa") %>% 
+  select(Type, Family, Genus, Abundance) %>% 
+  dplyr::rename(Class = Family, Gene = Genus)
+
+#Joining my data frames
+nodes <-ARGs_nodes %>% 
+  dplyr::union(virulence_nodes) %>% 
+  dplyr::union(phages_nodes) %>% 
+  dplyr::union(taxa_nodes)
+
+#Formating for Gephi
+nodes <- nodes %>% 
+  mutate(id = 1:nrow(nodes)) %>% #Number correspond to the number of observations in nodes table
+  mutate(Label = Gene) %>% #Changing name of column Gene for Label, which is going to be the label observed in the network
+  select(Label, id, Abundance, everything()) #Reordering columns
+
+#Saving final file as csv
+write.csv(nodes, "~/OneDrive\ -\ Michigan\ State\ University/Manning_lab/Mastitis_project/GitHub/data/networks/week5_control_nodes.csv", row.names = F)
+```
+
+###Edges
+```{r}
+#Making an abundance matrix that exclude the metadata and only include genes/taxa abundances
+abundance_matrix <- meta_taxa %>% 
+  filter(Treatment == "Control", sampling == "5") %>% #filtering samples from control group on a given time point
+  select(-one_of(colnames(metadata))) #select all columns except the ones found in the metadata
+
+abundance_matrix[is.na(abundance_matrix)] <- 0 #converting NAs to 0 to calculate correlations
+
+
+library(Hmisc)
+#Calculating correlations
+correlations <-rcorr(as.matrix(abundance_matrix))
+
+#Function to change correlation table format
+flattenCorrMatrix <- function(cormat, pmat) {
+  ut <- upper.tri(cormat)
+  data.frame(
+    row = rownames(cormat)[row(cormat)[ut]],
+    column = rownames(cormat)[col(cormat)[ut]],
+    cor  =(cormat)[ut],
+    p = pmat[ut]
+    )
+}
+
+edges = flattenCorrMatrix(correlations$r, correlations$P)
+
+#Renaming columns, adding correlation type, and filtering correlations higher than 0.75
+edges <- edges %>% 
+  dplyr::rename(Label = row, Target = column, Correlation = cor) %>% #Labels required in Gephi
+  mutate(Type = "undirected") %>% #This column is required in Gephi, tells the direction of the relationship between nodes
+  filter(Correlation >= 0.75, p <= 0.05) #Filtering significant correlations
+
+#Changing labels for id numbers (corresponding to node id). This is the format that Gephi requires
+edges_source_numbers <- left_join(edges,nodes, by = "Label") %>%
+  dplyr::rename(Source = id) %>% 
+  select(Source, Target, Correlation, Type.x) %>% 
+  dplyr::rename(Label = Target)
+
+edges_target_source_numbers <- left_join(edges_source_numbers,nodes, by = "Label") %>% 
+  select(Source, id, Correlation, Type.x) %>% 
+  dplyr::rename(Target = id, Type = Type.x)
+
+#Saving edges files as csv
+
+#Edge table with node labels (just for reference)
+write.csv(edges, "~/OneDrive\ -\ Michigan\ State\ University/Manning_lab/Mastitis_project/GitHub/data/networks/week5_control_edges_labels.csv", row.names = F)
+
+#Edge table with node numbers (the one to use in Gephi)
+write.csv(edges_target_source_numbers, "~/OneDrive\ -\ Michigan\ State\ University/Manning_lab/Mastitis_project/GitHub/data/networks/week5_control_edges_gephi.csv", row.names = F)
+```
+
+
+##ANTIBIOTIC GROUP
+###Nodes
+This table will have information about the nodes like type (ARG, phage, virulence, taxa), class (family for taxa and phages), gene (genus for taxa and phages), and abundance.
+```{r}
+#Creating vector that includes the names of samples from the control group
+
+##First, create a data frame with the sequencing names that correspond to the column/sample names in the ARG, virulence and phage files
+samples <- meta_taxa %>% 
+  filter(Treatment == "Antibiotic", sampling == "5") %>% 
+  select(Name)
+
+#Creating the node's data frame that includes the columns: Type, Class, Gene, and Abundance, and that only includes samples from the desired time point
+
+ARGs_nodes <-  ARGs %>%
+  select(Drug_Class, Gene, ARG, samples$Name) %>% #selecting the specified columns and the samples previously filtered
+  mutate(Abundance = rowSums(.[samples$Name])) %>% #Numbers correspond to columns that include samples
+  mutate(Type = "ARG") %>% #Adding a column with gene/taxa type
+  dplyr::rename(Class = Drug_Class) %>% #Rename is to standardize the column names, so we can join the the data frames
+  dplyr::rename(Gene_name = Gene) %>% #Rename is to standardize the column names, so we can join the the data frames
+  dplyr::rename(Gene = ARG) %>% #Rename is to standardize the column names, so we can join the the data frames
+  select(Type, Class, Gene, Abundance) #Re-ordering the columns
+
+virulence_nodes <-  virulence %>% 
+  select(Type, Function, Gene, samples$Name) %>% 
+  mutate(Abundance = rowSums(.[samples$Name]))  %>% 
+  dplyr::rename(Class = Function) %>% 
+  select(Type, Class, Gene, Abundance) %>% 
+  mutate(Type = recode(Type, `Nutrient intake` = "Virulence", Unknown = "Virulence",`Environmental stress protection` = "Virulence", Invasion = "Virulence")) #Changing all virulence gene type names to "Virulence"
+
+phages_nodes <-  Phages %>% 
+  select(Family, Species, samples$Name) %>% 
+  mutate(Abundance = rowSums(.[samples$Name]))  %>% 
+  mutate(Type = "Phage") %>% 
+  select(Type, Family, Species, Abundance) %>% 
+  dplyr::rename(Class = Family, Gene = Species)
+
+taxa_nodes <- taxa_fam_gn %>% 
+  select(Family, Genus, samples$Name) %>% 
+  mutate(Abundance = rowSums(.[samples$Name]))  %>% 
+  mutate(Type = "Taxa") %>% 
+  select(Type, Family, Genus, Abundance) %>% 
+  dplyr::rename(Class = Family, Gene = Genus)
+
+#Joining my data frames
+nodes <-ARGs_nodes %>% 
+  dplyr::union(virulence_nodes) %>% 
+  dplyr::union(phages_nodes) %>% 
+  dplyr::union(taxa_nodes)
+
+#Formating for Gephi
+nodes <- nodes %>% 
+  mutate(id = 1:nrow(nodes)) %>% #Number correspond to the number of observations in nodes table
+  mutate(Label = Gene) %>% #Changing name of column Gene for Label, which is going to be the label observed in the network
+  select(Label, id, Abundance, everything()) #Reordering columns
+
+#Saving final file as csv
+write.csv(nodes, "~/OneDrive\ -\ Michigan\ State\ University/Manning_lab/Mastitis_project/GitHub/data/networks/week5_antibiotic_nodes.csv", row.names = F)
+```
+
+###Edges
+```{r}
+#Making an abundance matrix that exclude the metadata and only include genes/taxa abundances
+abundance_matrix <- meta_taxa %>% 
+  filter(Treatment == "Antibiotic", sampling == "5") %>% #filtering samples from control group on a given time point
+  select(-one_of(colnames(metadata))) #select all columns except the ones found in the metadata
+
+abundance_matrix[is.na(abundance_matrix)] <- 0 #converting NAs to 0 to calculate correlations
+
+
+library(Hmisc)
+#Calculating correlations
+correlations <-rcorr(as.matrix(abundance_matrix))
+
+#Function to change correlation table format
+flattenCorrMatrix <- function(cormat, pmat) {
+  ut <- upper.tri(cormat)
+  data.frame(
+    row = rownames(cormat)[row(cormat)[ut]],
+    column = rownames(cormat)[col(cormat)[ut]],
+    cor  =(cormat)[ut],
+    p = pmat[ut]
+    )
+}
+
+edges = flattenCorrMatrix(correlations$r, correlations$P)
+
+#Renaming columns, adding correlation type, and filtering correlations higher than 0.75
+edges <- edges %>% 
+  dplyr::rename(Label = row, Target = column, Correlation = cor) %>% #Labels required in Gephi
+  mutate(Type = "undirected") %>% #This column is required in Gephi, tells the direction of the relationship between nodes
+  filter(Correlation >= 0.75, p <= 0.05) #Filtering significant correlations
+
+#Changing labels for id numbers (corresponding to node id). This is the format that Gephi requires
+edges_source_numbers <- left_join(edges,nodes, by = "Label") %>%
+  dplyr::rename(Source = id) %>% 
+  select(Source, Target, Correlation, Type.x) %>% 
+  dplyr::rename(Label = Target)
+
+edges_target_source_numbers <- left_join(edges_source_numbers,nodes, by = "Label") %>% 
+  select(Source, id, Correlation, Type.x) %>% 
+  dplyr::rename(Target = id, Type = Type.x)
+
+#Saving edges files as csv
+
+#Edge table with node labels (just for reference)
+write.csv(edges, "~/OneDrive\ -\ Michigan\ State\ University/Manning_lab/Mastitis_project/GitHub/data/networks/week5_antibiotic_edges_labels.csv", row.names = F)
+
+#Edge table with node numbers (the one to use in Gephi)
+write.csv(edges_target_source_numbers, "~/OneDrive\ -\ Michigan\ State\ University/Manning_lab/Mastitis_project/GitHub/data/networks/week5_antibiotic_edges_gephi.csv", row.names = F)
+```
+
+
+
+#WEEK 9
+##CONTROL GROUP
+###Nodes
+This table will have information about the nodes like type (ARG, phage, virulence, taxa), class (family for taxa and phages), gene (genus for taxa and phages), and abundance.
+```{r}
+#Creating vector that includes the names of samples from the control group
+
+##First, create a data frame with the sequencing names that correspond to the column/sample names in the ARG, virulence and phage files
+samples <- meta_taxa %>% 
+  filter(Treatment == "Control", sampling == "7") %>% 
+  select(Name)
+
+#Creating the node's data frame that includes the columns: Type, Class, Gene, and Abundance, and that only includes samples from the desired time point
+
+ARGs_nodes <-  ARGs %>%
+  select(Drug_Class, Gene, ARG, samples$Name) %>% #selecting the specified columns and the samples previously filtered
+  mutate(Abundance = rowSums(.[samples$Name])) %>% #Numbers correspond to columns that include samples
+  mutate(Type = "ARG") %>% #Adding a column with gene/taxa type
+  dplyr::rename(Class = Drug_Class) %>% #Rename is to standardize the column names, so we can join the the data frames
+  dplyr::rename(Gene_name = Gene) %>% #Rename is to standardize the column names, so we can join the the data frames
+  dplyr::rename(Gene = ARG) %>% #Rename is to standardize the column names, so we can join the the data frames
+  select(Type, Class, Gene, Abundance) #Re-ordering the columns
+
+virulence_nodes <-  virulence %>% 
+  select(Type, Function, Gene, samples$Name) %>% 
+  mutate(Abundance = rowSums(.[samples$Name]))  %>% 
+  dplyr::rename(Class = Function) %>% 
+  select(Type, Class, Gene, Abundance) %>% 
+  mutate(Type = recode(Type, `Nutrient intake` = "Virulence", Unknown = "Virulence",`Environmental stress protection` = "Virulence", Invasion = "Virulence")) #Changing all virulence gene type names to "Virulence"
+
+phages_nodes <-  Phages %>% 
+  select(Family, Species, samples$Name) %>% 
+  mutate(Abundance = rowSums(.[samples$Name]))  %>% 
+  mutate(Type = "Phage") %>% 
+  select(Type, Family, Species, Abundance) %>% 
+  dplyr::rename(Class = Family, Gene = Species)
+
+taxa_nodes <- taxa_fam_gn %>% 
+  select(Family, Genus, samples$Name) %>% 
+  mutate(Abundance = rowSums(.[samples$Name]))  %>% 
+  mutate(Type = "Taxa") %>% 
+  select(Type, Family, Genus, Abundance) %>% 
+  dplyr::rename(Class = Family, Gene = Genus)
+
+#Joining my data frames
+nodes <-ARGs_nodes %>% 
+  dplyr::union(virulence_nodes) %>% 
+  dplyr::union(phages_nodes) %>% 
+  dplyr::union(taxa_nodes)
+
+#Formating for Gephi
+nodes <- nodes %>% 
+  mutate(id = 1:nrow(nodes)) %>% #Number correspond to the number of observations in nodes table
+  mutate(Label = Gene) %>% #Changing name of column Gene for Label, which is going to be the label observed in the network
+  select(Label, id, Abundance, everything()) #Reordering columns
+
+#Saving final file as csv
+write.csv(nodes, "~/OneDrive\ -\ Michigan\ State\ University/Manning_lab/Mastitis_project/GitHub/data/networks/week9_control_nodes.csv", row.names = F)
+```
+
+###Edges
+```{r}
+#Making an abundance matrix that exclude the metadata and only include genes/taxa abundances
+abundance_matrix <- meta_taxa %>% 
+  filter(Treatment == "Control", sampling == "7") %>% #filtering samples from control group on a given time point
+  select(-one_of(colnames(metadata))) #select all columns except the ones found in the metadata
+
+abundance_matrix[is.na(abundance_matrix)] <- 0 #converting NAs to 0 to calculate correlations
+
+
+library(Hmisc)
+#Calculating correlations
+correlations <-rcorr(as.matrix(abundance_matrix))
+
+#Function to change correlation table format
+flattenCorrMatrix <- function(cormat, pmat) {
+  ut <- upper.tri(cormat)
+  data.frame(
+    row = rownames(cormat)[row(cormat)[ut]],
+    column = rownames(cormat)[col(cormat)[ut]],
+    cor  =(cormat)[ut],
+    p = pmat[ut]
+    )
+}
+
+edges = flattenCorrMatrix(correlations$r, correlations$P)
+
+#Renaming columns, adding correlation type, and filtering correlations higher than 0.75
+edges <- edges %>% 
+  dplyr::rename(Label = row, Target = column, Correlation = cor) %>% #Labels required in Gephi
+  mutate(Type = "undirected") %>% #This column is required in Gephi, tells the direction of the relationship between nodes
+  filter(Correlation >= 0.75, p <= 0.05) #Filtering significant correlations
+
+#Changing labels for id numbers (corresponding to node id). This is the format that Gephi requires
+edges_source_numbers <- left_join(edges,nodes, by = "Label") %>%
+  dplyr::rename(Source = id) %>% 
+  select(Source, Target, Correlation, Type.x) %>% 
+  dplyr::rename(Label = Target)
+
+edges_target_source_numbers <- left_join(edges_source_numbers,nodes, by = "Label") %>% 
+  select(Source, id, Correlation, Type.x) %>% 
+  dplyr::rename(Target = id, Type = Type.x)
+
+#Saving edges files as csv
+
+#Edge table with node labels (just for reference)
+write.csv(edges, "~/OneDrive\ -\ Michigan\ State\ University/Manning_lab/Mastitis_project/GitHub/data/networks/week9_control_edges_labels.csv", row.names = F)
+
+#Edge table with node numbers (the one to use in Gephi)
+write.csv(edges_target_source_numbers, "~/OneDrive\ -\ Michigan\ State\ University/Manning_lab/Mastitis_project/GitHub/data/networks/week9_control_edges_gephi.csv", row.names = F)
+```
+
+
+##ANTIBIOTIC GROUP
+###Nodes
+This table will have information about the nodes like type (ARG, phage, virulence, taxa), class (family for taxa and phages), gene (genus for taxa and phages), and abundance.
+```{r}
+#Creating vector that includes the names of samples from the control group
+
+##First, create a data frame with the sequencing names that correspond to the column/sample names in the ARG, virulence and phage files
+samples <- meta_taxa %>% 
+  filter(Treatment == "Antibiotic", sampling == "7") %>% 
+  select(Name)
+
+#Creating the node's data frame that includes the columns: Type, Class, Gene, and Abundance, and that only includes samples from the desired time point
+
+ARGs_nodes <-  ARGs %>%
+  select(Drug_Class, Gene, ARG, samples$Name) %>% #selecting the specified columns and the samples previously filtered
+  mutate(Abundance = rowSums(.[samples$Name])) %>% #Numbers correspond to columns that include samples
+  mutate(Type = "ARG") %>% #Adding a column with gene/taxa type
+  dplyr::rename(Class = Drug_Class) %>% #Rename is to standardize the column names, so we can join the the data frames
+  dplyr::rename(Gene_name = Gene) %>% #Rename is to standardize the column names, so we can join the the data frames
+  dplyr::rename(Gene = ARG) %>% #Rename is to standardize the column names, so we can join the the data frames
+  select(Type, Class, Gene, Abundance) #Re-ordering the columns
+
+virulence_nodes <-  virulence %>% 
+  select(Type, Function, Gene, samples$Name) %>% 
+  mutate(Abundance = rowSums(.[samples$Name]))  %>% 
+  dplyr::rename(Class = Function) %>% 
+  select(Type, Class, Gene, Abundance) %>% 
+  mutate(Type = recode(Type, `Nutrient intake` = "Virulence", Unknown = "Virulence",`Environmental stress protection` = "Virulence", Invasion = "Virulence")) #Changing all virulence gene type names to "Virulence"
+
+phages_nodes <-  Phages %>% 
+  select(Family, Species, samples$Name) %>% 
+  mutate(Abundance = rowSums(.[samples$Name]))  %>% 
+  mutate(Type = "Phage") %>% 
+  select(Type, Family, Species, Abundance) %>% 
+  dplyr::rename(Class = Family, Gene = Species)
+
+taxa_nodes <- taxa_fam_gn %>% 
+  select(Family, Genus, samples$Name) %>% 
+  mutate(Abundance = rowSums(.[samples$Name]))  %>% 
+  mutate(Type = "Taxa") %>% 
+  select(Type, Family, Genus, Abundance) %>% 
+  dplyr::rename(Class = Family, Gene = Genus)
+
+#Joining my data frames
+nodes <-ARGs_nodes %>% 
+  dplyr::union(virulence_nodes) %>% 
+  dplyr::union(phages_nodes) %>% 
+  dplyr::union(taxa_nodes)
+
+#Formating for Gephi
+nodes <- nodes %>% 
+  mutate(id = 1:nrow(nodes)) %>% #Number correspond to the number of observations in nodes table
+  mutate(Label = Gene) %>% #Changing name of column Gene for Label, which is going to be the label observed in the network
+  select(Label, id, Abundance, everything()) #Reordering columns
+
+#Saving final file as csv
+write.csv(nodes, "~/OneDrive\ -\ Michigan\ State\ University/Manning_lab/Mastitis_project/GitHub/data/networks/week9_antibiotic_nodes.csv", row.names = F)
+```
+
+
+###Edges
+```{r}
+#Making an abundance matrix that exclude the metadata and only include genes/taxa abundances
+abundance_matrix <- meta_taxa %>% 
+  filter(Treatment == "Antibiotic", sampling == "7") %>% #filtering samples from control group on a given time point
+  select(-one_of(colnames(metadata))) #select all columns except the ones found in the metadata
+
+abundance_matrix[is.na(abundance_matrix)] <- 0 #converting NAs to 0 to calculate correlations
+
+
+library(Hmisc)
+#Calculating correlations
+correlations <-rcorr(as.matrix(abundance_matrix))
+
+#Function to change correlation table format
+flattenCorrMatrix <- function(cormat, pmat) {
+  ut <- upper.tri(cormat)
+  data.frame(
+    row = rownames(cormat)[row(cormat)[ut]],
+    column = rownames(cormat)[col(cormat)[ut]],
+    cor  =(cormat)[ut],
+    p = pmat[ut]
+    )
+}
+
+edges = flattenCorrMatrix(correlations$r, correlations$P)
+
+#Renaming columns, adding correlation type, and filtering correlations higher than 0.75
+edges <- edges %>% 
+  dplyr::rename(Label = row, Target = column, Correlation = cor) %>% #Labels required in Gephi
+  mutate(Type = "undirected") %>% #This column is required in Gephi, tells the direction of the relationship between nodes
+  filter(Correlation >= 0.75, p <= 0.05) #Filtering significant correlations
+
+#Changing labels for id numbers (corresponding to node id). This is the format that Gephi requires
+edges_source_numbers <- left_join(edges,nodes, by = "Label") %>%
+  dplyr::rename(Source = id) %>% 
+  select(Source, Target, Correlation, Type.x) %>% 
+  dplyr::rename(Label = Target)
+
+edges_target_source_numbers <- left_join(edges_source_numbers,nodes, by = "Label") %>% 
+  select(Source, id, Correlation, Type.x) %>% 
+  dplyr::rename(Target = id, Type = Type.x)
+
+#Saving edges files as csv
+
+#Edge table with node labels (just for reference)
+write.csv(edges, "~/OneDrive\ -\ Michigan\ State\ University/Manning_lab/Mastitis_project/GitHub/data/networks/week9_antibiotic_edges_labels.csv", row.names = F)
+
+#Edge table with node numbers (the one to use in Gephi)
+write.csv(edges_target_source_numbers, "~/OneDrive\ -\ Michigan\ State\ University/Manning_lab/Mastitis_project/GitHub/data/networks/week9_antibiotic_edges_gephi.csv", row.names = F)
+```

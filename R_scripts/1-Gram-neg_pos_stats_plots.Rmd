@@ -1,0 +1,829 @@
+---
+title: "R Notebook"
+output:
+  html_document:
+    df_print: paged
+---
+
+#GRAM-NEGATIVE AND GRAM-POSITIVE BACTERIA CULTURE
+
+##Activating Libraries
+```{r}
+library(readxl)
+library(ggpubr)
+library(forcats)
+library(ggsci)
+```
+
+#Import table
+```{r}
+setwd("~/OneDrive - Michigan State University/Manning_lab/Mastitis_project/GitHub/data/")
+counts_CFU <- read.csv("metadata_full.csv")
+counts_CFU$Treatment <- factor(counts_CFU$Treatment, levels = c("Control", "Antibiotic"))
+```
+
+#GRAM NEGATIVES
+
+##Difference between day -1 and week 1 within the same treatment group
+```{r}
+library(dplyr)
+library(rstatix)
+`%notin%` <- Negate(`%in%`)
+
+stat.test <- counts_CFU %>% 
+  dplyr::filter(`GN_CFU.g` %notin% NA, study_ID %notin% "MA027", Time_tx %notin% "Week 11") %>%
+  filter(Time_tx %in% c("Week 1", "Day -1")) %>% 
+  dplyr::group_by(Treatment) %>%
+  rstatix::wilcox_test(`GN_CFU.g` ~ Time_tx, alternative = "greater", paired = T) %>%
+ rstatix::adjust_pvalue(method = "none") %>%
+  rstatix::add_significance("p.adj")
+stat.test
+```
+##Difference between treatment groups by time point (day -1, week 1-5), PAIRED TEST 
+```{r}
+library(dplyr)
+library(rstatix)
+`%notin%` <- Negate(`%in%`)
+
+stat.test <- counts_CFU %>% 
+  dplyr::filter(`GN_CFU.g` %notin% NA, study_ID %notin% "MA027", Time_tx %notin% c("Week 11","Week 7","Week 9")) %>% #Filtering MA027 because it was drawn from the study in week 1. Not including weeks 7 and 9 because one animal was drawn from the study in week 7 (see chunk below) and the analysis could not be paired for those weeks. Not including Week 11 because we only took samples of 4 out of 20 animals in that week.
+  dplyr::group_by(Time_tx) %>%
+  rstatix::wilcox_test(`GN_CFU.g` ~ Treatment, alternative = "greater", paired = T) %>%
+ rstatix::adjust_pvalue(method = "none") %>%
+  rstatix::add_significance("p.adj")
+stat.test
+```
+
+##Difference between treatment groups by time point, weeks 7 and 9 PAIRED (1 cow was draw of the study on week7)
+```{r}
+library(dplyr)
+library(rstatix)
+`%notin%` <- Negate(`%in%`)
+
+stat.test <- counts_CFU %>% 
+  dplyr::filter(`GN_CFU.g` %notin% NA, study_ID %notin% c("MA027","MA028"), Time_tx %in% c("Week 7","Week 9")) %>% #Filtering MA028 because it was paired with MA029 which was drawn from the study on week 7
+  dplyr::group_by(Time_tx) %>%
+  rstatix::wilcox_test(`GN_CFU.g` ~ Treatment, alternative = "greater", paired = T) %>%
+ rstatix::adjust_pvalue(method = "none") %>%
+  rstatix::add_significance("p.adj")
+stat.test
+```
+
+##Significance over the time period (regardless of treatment)
+```{r}
+stat.test <- counts_CFU %>% 
+  dplyr::filter(`GN_CFU.g` %notin% NA) %>%
+  dplyr::filter(Time_tx %notin% "Week 11") %>%
+  kruskal_test(`GN_CFU.g` ~ Time_tx) 
+stat.test
+```
+
+##Total Gram-negatives plot
+```{r}
+library(ggpubr)
+total_line <- counts_CFU %>% 
+  dplyr::filter(`GN_CFU.g` %notin% NA, study_ID %notin% "MA027", Time_tx %notin% "Week 11") %>%
+  ggline(x = "Time_tx", y = "GN_CFU.g", color = "Treatment", add = c("mean_se"),  
+         ylab = "Total Gram-negative CFU/g", xlab = "Time to treatment", palette = "jama") + 
+  scale_y_continuous(labels = function(x) format(x, scientific = TRUE)) +  
+  annotate("text", x = 1, y = 1.2e+06, label = expression("0.027"), colour = "black") +  
+  annotate("text", x = 2, y = 1.8e+06, label = expression("0.006"), colour = "black") +  
+  annotate("text", x = 3, y = 1.2e+06, label = expression("0.522"), colour = "black") +  
+  annotate("text", x = 4, y = 1.5e+06, label = expression("0.435"), colour = "black") +  
+  annotate("text", x = 5, y = 0.92e+06, label = expression("0.062"), colour = "black") +  
+  annotate("text", x = 6, y = 1e+06, label = expression("0.198"), colour = "black") +  
+  annotate("text", x = 7, y = 1.6e+06, label = expression("0.524"), colour = "black") +  
+  annotate("text", x = 4, y = 2.5e+06, label = expression(paste("Kruskal-Wallis, ", paste(italic('p'))," = 0.037"))) +
+  geom_signif(aes(y = `GN_CFU.g`, x = Time_tx),comparisons = list(c("Day -1","Week 1"),
+                                                                 c("Week 1","Week 2"),
+                                                                 c("Week 2","Week 3"),
+                                                                 c("Week 3","Week 5"),
+                                                                 c("Week 5","Week 7"), 
+                                                                 c("Week 7","Week 9")), 
+              test = "wilcox.test", y_position = c(1.8e+06,1.9e+06,1.5e+06,1.7e+06,1e+06,1.6e+06), color = "gray40", tip_length = 0.002, test.args=list(alternative = "less", var.equal = FALSE, paired=FALSE)) + 
+  theme(axis.title.x = element_blank())
+
+total_line
+```
+##Average Total Gram-negatives per week and treatment group
+```{r}
+counts_CFU %>% 
+  dplyr::filter(`GN_CFU.g` %notin% NA, study_ID %notin% "MA027", Time_tx %notin% "Week 11") %>%
+  group_by(Treatment, Time_tx) %>% 
+  summarise(totaGN = mean(`GN_CFU.g`))
+```
+
+#Gram-negatives AMPICILLIN resistant CFU/g
+##Significance over the time period (regardless of treatment)
+```{r}
+`%notin%` <- Negate(`%in%`)
+
+stat.test <- counts_CFU %>% 
+  dplyr::filter(`GN_Amp_per` %notin% NA) %>%
+  rstatix::kruskal_test(`GN_Amp_per` ~ Time_tx) %>%
+ rstatix::adjust_pvalue(method = "none") %>%
+  rstatix::add_significance("p.adj")
+stat.test
+```
+
+##Difference between treatment groups by time point (day -1, week 1-5), PAIRED TEST 
+```{r}
+stat.test <- counts_CFU %>% 
+  dplyr::filter(`GN_Amp_CFU.g` %notin% NA) %>%
+  dplyr::filter(`GN_Amp_CFU.g` %notin% NA, study_ID %notin% "MA027", Time_tx %notin% c("Week 11","Week 7","Week 9")) %>% #Filtering MA027 because it was drawn from the study in week 1. Not including weeks 7 and 9 because one animal was drawn from the study in week 7 (see chunk below) and the analysis could not be paired for those weeks. Not including Week 11 because we only took samples of 4 out of 20 animals in that week.
+  dplyr::group_by(Time_tx) %>%
+  rstatix::wilcox_test(`GN_Amp_CFU.g` ~ Treatment, alternative = "greater", paired = T) %>%
+ rstatix::adjust_pvalue(method = "none") %>%
+  rstatix::add_significance("p.adj")
+stat.test
+```
+##Difference between treatment groups by time point (weeks 7-9), PAIRED TEST 
+```{r}
+stat.test <- counts_CFU %>% 
+  dplyr::filter(`GN_Amp_CFU.g` %notin% NA) %>%
+  dplyr::filter(`GN_Amp_CFU.g` %notin% NA, study_ID %notin% c("MA027","MA028"), Time_tx %in% c("Week 7","Week 9")) %>% #Filtering MA028 because it was paired with MA029 which was drawn from the study on week 7
+  dplyr::group_by(Time_tx) %>%
+  rstatix::wilcox_test(`GN_Amp_CFU.g` ~ Treatment, alternative = "greater", paired = T) %>%
+ rstatix::adjust_pvalue(method = "none") %>%
+  rstatix::add_significance("p.adj")
+stat.test
+```
+
+##GN Amp CFU/g line plot
+```{r}
+amp_line <- counts_CFU %>% 
+  dplyr::filter(`GN_Amp_CFU.g` %notin% NA) %>%
+  dplyr::filter(study_ID %notin% "MA027") %>% 
+  dplyr::filter(Time_tx %notin% "Week 11") %>%
+  ggline(x = "Time_tx", y = "GN_Amp_CFU.g", color = "Treatment", add = c("mean_se"),  ylab = "Ampicillin(R) Gram-negative CFU/g", xlab = "Time to treatment", palette = "jama") +  
+  annotate("text", x = 1, y = 1.3e+05, label = expression("0.874"), colour = "black") +  
+  annotate("text", x = 2, y = 5e+04, label = expression("0.460"), colour = "black") +  
+  annotate("text", x = 3, y = 2.2e+05, label = expression("0.257"), colour = "black") +  
+  annotate("text", x = 4, y = 6.4e+04, label = expression("0.167"), colour = "black") +  
+  annotate("text", x = 5, y = 2e+04, label = expression("0.368"), colour = "black") +  
+  annotate("text", x = 6, y = 2e+04, label = expression("0.381"), colour = "black") +  
+  annotate("text", x = 7, y = 1.3e+05, label = expression("0.152"), colour = "black") +  
+  annotate("text", x = 4, y = 3e+05, label = expression(paste("Kruskal-Wallis, ", paste(italic('p'))," = 7.73e-05"))) +  scale_y_continuous(labels = function(x) format(x, scientific = TRUE)) +
+  geom_signif(aes(y = `GN_Amp_CFU.g`, x = Time_tx),comparisons = list(c("Day -1","Week 1"),
+                                                                 c("Week 1","Week 2"),
+                                                                 c("Week 2","Week 3"),
+                                                                 c("Week 3","Week 5"),
+                                                                 c("Week 5","Week 7"), 
+                                                                 c("Week 7","Week 9")), 
+              test = "wilcox.test", test.args=list(alternative = "less", var.equal = FALSE, paired=FALSE), color = "gray40", tip_length = 0.002, y_position = c(80000,1.5e+05,1.8e+05,10000,2e+02,60000)) + 
+  theme(axis.title.x = element_blank())
+
+
+amp_line 
+```
+#Gram-negatives AMPICILLIN resistant percentage (%)
+Percentage was calculated over the total number of Gram-negative bacteria
+
+##Significance over the time period (regardless of treatment)
+```{r}
+library(dplyr)
+library(rstatix)
+`%notin%` <- Negate(`%in%`)
+
+stat.test <- counts_CFU %>% 
+  dplyr::filter(`GN_Amp_per` %notin% NA) %>%
+  dplyr::filter(study_ID %notin% "MA027") %>%
+  rstatix::kruskal_test(`GN_Amp_per` ~ Time_tx) %>%
+ rstatix::adjust_pvalue(method = "none") %>%
+  rstatix::add_significance("p.adj")
+stat.test
+```
+
+##Difference between treatment groups by time point (day -1, week 1-5), PAIRED TEST 
+```{r}
+stat.test <- counts_CFU %>% 
+  dplyr::filter(`GN_Amp_per` %notin% NA, study_ID %notin% "MA027", Time_tx %notin% c("Week 11","Week 7","Week 9")) %>% #Filtering MA027 because it was drawn from the study in week 1. Not including weeks 7 and 9 because one animal was drawn from the study in week 7 (see chunk below) and the analysis could not be paired for those weeks. Not including Week 11 because we only took samples of 4 out of 20 animals in that week.
+  dplyr::group_by(Time_tx) %>%
+  rstatix::wilcox_test(`GN_Amp_per` ~ Treatment, alternative = "less", paired = T) %>%
+ rstatix::adjust_pvalue(method = "none") %>%
+  rstatix::add_significance("p.adj")
+stat.test
+```
+##Difference between treatment groups by time point (weeks 7-9), PAIRED TEST 
+```{r}
+stat.test <- counts_CFU %>% 
+  dplyr::filter(`GN_Amp_per` %notin% NA) %>%
+  dplyr::filter(`GN_Amp_per` %notin% NA, study_ID %notin% c("MA027","MA028"), Time_tx %in% c("Week 7","Week 9")) %>% #Filtering MA028 because it was paired with MA029 which was drawn from the study on week 7
+  dplyr::group_by(Time_tx) %>%
+  rstatix::wilcox_test(`GN_Amp_per` ~ Treatment, alternative = "less", paired = T) %>%
+ rstatix::adjust_pvalue(method = "none") %>%
+  rstatix::add_significance("p.adj")
+stat.test
+```
+
+##GN Amp percentage line plot
+```{r}
+amp_line_per <- counts_CFU %>% 
+  dplyr::filter(`GN_Amp_per` %notin% NA) %>%
+  dplyr::filter(study_ID %notin% "MA027") %>% 
+  dplyr::filter(Time_tx %notin% "Week 11") %>%
+  ggline(x = "Time_tx", y = "GN_Amp_per", color = "Treatment", add = c("mean_se"),  ylab = "Ampicillin(R) Gram-negative %", xlab = "Time to treatment", palette = "jama") +  
+  annotate("text", x = 1, y = 13, label = expression("0.0026"), colour = "black") +  
+  annotate("text", x = 2, y = 5, label = expression("0.245"), colour = "black") +  
+  annotate("text", x = 3, y = 15, label = expression("0.785"), colour = "black") +  
+  annotate("text", x = 4, y = 11, label = expression("0.702"), colour = "black") +  
+  annotate("text", x = 5, y = 3, label = expression("0.185"), colour = "black") +  
+  annotate("text", x = 6, y = 3, label = expression("0.234"), colour = "black") +  
+  annotate("text", x = 7, y = 5, label = expression("0.516"), colour = "black") +  
+  annotate("text", x = 4, y = 22, label = expression(paste("Kruskal-Wallis, ", paste(italic('p'))," = 8.72e-05"))) +
+  geom_signif(aes(y = `GN_Amp_per`, x = Time_tx),comparisons = list(c("Day -1","Week 1"),
+                                                                 c("Week 1","Week 2"),
+                                                                 c("Week 2","Week 3"),
+                                                                 c("Week 3","Week 5"),
+                                                                 c("Week 5","Week 7"), 
+                                                                 c("Week 7","Week 9")), 
+              test = "wilcox.test", test.args=list(alternative  = "less", var.equal = FALSE, paired=FALSE), color = "gray40", tip_length = 0.002, y_position = c(9,11,13,7,.1,2)) + 
+  theme(axis.title.x = element_blank())
+
+
+amp_line_per
+```
+
+#Gram-negatives CEFTIOFUR resistant CFU/g
+##Significance over the time period (regardless of treatment)##Significance over the time period (regardless of treatment)
+```{r}
+`%notin%` <- Negate(`%in%`)
+
+stat.test <- counts_CFU %>% 
+  dplyr::filter(`GN_Cef_per` %notin% NA) %>%
+  rstatix::kruskal_test(`GN_Cef_per` ~ Time_tx) %>%
+ rstatix::adjust_pvalue(method = "none") %>%
+  rstatix::add_significance("p.adj")
+stat.test
+```
+##Average by time point
+```{r}
+counts_CFU %>% 
+  dplyr::filter(`GN_Cef_CFU.g` %notin% NA, study_ID %notin% "MA027") %>%
+  group_by(Time_tx, Treatment) %>% 
+  summarise(`Ceftiofur_CFU/g` = mean(`GN_Cef_CFU.g`))
+```
+##Difference between treatment groups by time point (day -1, week 1-5), PAIRED TEST 
+```{r}
+stat.test <- counts_CFU %>% 
+  dplyr::filter(`GN_Cef_CFU.g` %notin% NA, study_ID %notin% "MA027", Time_tx %notin% c("Week 11","Week 7","Week 9")) %>% #Filtering MA027 because it was drawn from the study in week 1. Not including weeks 7 and 9 because one animal was drawn from the study in week 7 (see chunk below) and the analysis could not be paired for those weeks. Not including Week 11 because we only took samples of 4 out of 20 animals in that week.
+  dplyr::group_by(Time_tx) %>%
+  rstatix::wilcox_test(`GN_Cef_CFU.g` ~ Treatment, alternative = "less", paired = T) %>%
+ rstatix::adjust_pvalue(method = "none") %>%
+  rstatix::add_significance("p.adj")
+stat.test
+```
+##Difference between treatment groups by time point (weeks 7-9), PAIRED TEST 
+```{r}
+stat.test <- counts_CFU %>% 
+  dplyr::filter(`GN_Cef_CFU.g` %notin% NA) %>%
+  dplyr::filter(`GN_Cef_CFU.g` %notin% NA, study_ID %notin% c("MA027","MA028"), Time_tx %in% c("Week 7","Week 9")) %>% #Filtering MA028 because it was paired with MA029 which was drawn from the study on week 7
+  dplyr::group_by(Time_tx) %>%
+  rstatix::wilcox_test(`GN_Cef_CFU.g` ~ Treatment, alternative = "less", paired = T) %>%
+ rstatix::adjust_pvalue(method = "none") %>%
+  rstatix::add_significance("p.adj")
+stat.test
+```
+##Ceftiofur CFU/g plot
+```{r}
+cef_line <- counts_CFU %>% 
+  dplyr::filter(`GN_Cef_CFU.g` %notin% NA) %>%
+  dplyr::filter(study_ID %notin% "MA027") %>% 
+  dplyr::filter(Time_tx %notin% "Week 11") %>%
+  ggline(x = "Time_tx", y = "GN_Cef_CFU.g", color = "Treatment", add = c("mean_se"),  ylab = "Ceftiofur(R) Gram-negative CFU/g", xlab = "Time to treatment", palette = "jama") +  
+  annotate("text", x = 1, y = 360, label = expression("0.723"), colour = "black") +  
+  annotate("text", x = 2, y = 380, label = expression("0.277"), colour = "black") +  
+  annotate("text", x = 3, y = 620, label = expression("0.254"), colour = "black") +  
+  annotate("text", x = 4, y = 100, label = expression("0.568"), colour = "black") +  
+  annotate("text", x = 5, y = 100, label = expression("0.963"), colour = "black") +  
+  annotate("text", x = 6, y = 150, label = expression("0.664"), colour = "black") +  
+  annotate("text", x = 7, y = 300, label = expression("0.991"), colour = "black") +  
+  annotate("text", x = 4, y = 1000, label = expression(paste("Kruskal-Wallis, ", paste(italic('p'))," = 0.0032"))) +
+  geom_signif(aes(y = `GN_Cef_CFU.g`, x = Time_tx),comparisons = list(c("Day -1","Week 1"),
+                                                                 c("Week 1","Week 2"),
+                                                                 c("Week 2","Week 3"),
+                                                                 c("Week 3","Week 5"),
+                                                                 c("Week 5","Week 7"), 
+                                                                 c("Week 7","Week 9")), 
+              test = "wilcox.test", test.args=list(alternative = "less", var.equal = FALSE, paired=FALSE), color = "gray40", tip_length = 0.002, y_position = c(400,650,680,100,150,300)) + 
+  theme(axis.title.x = element_blank())
+
+
+cef_line 
+```
+#Gram-negatives CEFTIOFUR resistant percentage (%)
+Percentage was calculated over the total number of Gram-negative bacteria
+##Significance over the time period (regardless of treatment)
+```{r}
+library(dplyr)
+library(rstatix)
+`%notin%` <- Negate(`%in%`)
+
+stat.test <- counts_CFU %>% 
+  dplyr::filter(`GN_Cef_per` %notin% NA) %>%
+  rstatix::kruskal_test(`GN_Cef_per` ~ Time_tx) %>%
+ rstatix::adjust_pvalue(method = "none") %>%
+  rstatix::add_significance("p.adj")
+stat.test
+```
+
+##Difference between treatment groups by time point (day -1, week 1-5), PAIRED TEST 
+```{r}
+stat.test <- counts_CFU %>% 
+  dplyr::filter(`GN_Cef_per` %notin% NA, study_ID %notin% "MA027", Time_tx %notin% c("Week 11","Week 7","Week 9")) %>% #Filtering MA027 because it was drawn from the study in week 1. Not including weeks 7 and 9 because one animal was drawn from the study in week 7 (see chunk below) and the analysis could not be paired for those weeks. Not including Week 11 because we only took samples of 4 out of 20 animals in that week.
+  dplyr::group_by(Time_tx) %>%
+  rstatix::wilcox_test(`GN_Cef_per` ~ Treatment, alternative = "less", paired = T) %>%
+ rstatix::adjust_pvalue(method = "none") %>%
+  rstatix::add_significance("p.adj")
+stat.test
+```
+##Difference between treatment groups by time point (weeks 7-9), PAIRED TEST 
+```{r}
+stat.test <- counts_CFU %>% 
+  dplyr::filter(`GN_Cef_per` %notin% NA) %>%
+  dplyr::filter(`GN_Cef_per` %notin% NA, study_ID %notin% c("MA027","MA028"), Time_tx %in% c("Week 7","Week 9")) %>% #Filtering MA028 because it was paired with MA029 which was drawn from the study on week 7
+  dplyr::group_by(Time_tx) %>%
+  rstatix::wilcox_test(`GN_Cef_per` ~ Treatment, alternative = "less", paired = T) %>%
+ rstatix::adjust_pvalue(method = "none") %>%
+  rstatix::add_significance("p.adj")
+stat.test
+```
+
+##GN Ceftiofur resistant percentage line plot
+```{r}
+cef_line_per <- counts_CFU %>% 
+  dplyr::filter(`GN_Cef_per` %notin% NA) %>%
+  dplyr::filter(study_ID %notin% "MA027") %>% 
+  dplyr::filter(Time_tx %notin% "Week 11") %>%
+  ggline(x = "Time_tx", y = "GN_Cef_per", color = "Treatment", add = c("mean_se"),  ylab = "Ceftiofur(R) Gram-negative %", xlab = "Time to treatment", palette = "jama") +  
+  annotate("text", x = 1, y = .08, label = expression("0.534"), colour = "black") +  
+  annotate("text", x = 2, y = .12, label = expression("0.336"), colour = "black") +  
+  annotate("text", x = 3, y = .07, label = expression("0.290"), colour = "black") +  
+  annotate("text", x = 4, y = .03, label = expression("0.807"), colour = "black") +  
+  annotate("text", x = 5, y = .03, label = expression("0.977"), colour = "black") +  
+  annotate("text", x = 6, y = .04, label = expression("0.135"), colour = "black") +  
+  annotate("text", x = 7, y = .07, label = expression("0.838"), colour = "black") +  
+  annotate("text", x = 4, y = .20, label = expression(paste("Kruskal-Wallis, ", paste(italic('p'))," = 0.002"))) +
+  geom_signif(aes(y = `GN_Cef_per`, x = Time_tx),comparisons = list(c("Day -1","Week 1"),
+                                                                 c("Week 1","Week 2"),
+                                                                 c("Week 2","Week 3"),
+                                                                 c("Week 3","Week 5"),
+                                                                 c("Week 5","Week 7"), 
+                                                                 c("Week 7","Week 9")), 
+              test = "wilcox.test", test.args=list(alternative = "less", var.equal = FALSE, paired=FALSE), color = "gray40", tip_length = 0.002, y_position = c(.10,.12,.07,.02,.03,.05)) + 
+  theme(axis.title.x = element_blank())
+
+
+cef_line_per
+```
+
+#GRAM POSITIVES total
+
+#Average Gram-positives by treatment and time point
+```{r}
+counts_CFU %>% 
+  dplyr::filter(`GP_CFU.g` %notin% NA, study_ID %notin% "MA027", Time_tx %notin% "Week 11") %>%
+  group_by(Treatment, Time_tx) %>% 
+  summarise(totaGN = mean(`GP_CFU.g`))
+```
+
+##Difference between time-points per treatment group
+```{r}
+library(dplyr)
+library(rstatix)
+`%notin%` <- Negate(`%in%`)
+
+stat.test <- counts_CFU %>% 
+  dplyr::filter(`GP_CFU.g` %notin% NA) %>%
+  dplyr::filter(study_ID %notin% "MA027") %>%
+  dplyr::group_by(Treatment) %>%
+  rstatix::wilcox_test(`GP_CFU.g` ~ Time_tx, alternative = "g", paired = T) %>%
+    rstatix::adjust_pvalue(method = "none") %>%
+  rstatix::add_significance("p")
+stat.test
+```
+
+##Difference between treatments by time point
+```{r}
+library(dplyr)
+library(rstatix)
+`%notin%` <- Negate(`%in%`)
+
+stat.test <- counts_CFU %>% 
+  dplyr::filter(`GP_CFU.g` %notin% NA) %>%
+  dplyr::filter(study_ID %notin% "MA027") %>%
+  dplyr::filter(Time_tx %in% c("Day -1", "Week 1")) %>%
+  dplyr::group_by(Time_tx) %>%
+  rstatix::wilcox_test(`GP_CFU.g` ~ Treatment, alternative = "greater", paired = T) %>%
+    rstatix::adjust_pvalue(method = "none") %>%
+  rstatix::add_significance("p") %>%
+  add_xy_position(x = "Time_tx", dodge = 0.8)
+stat.test
+```
+
+##Total Gram-positives plot
+```{r}
+library(ggpubr)
+library(ggsci)
+GPtotal_boxplot = counts_CFU %>% 
+  dplyr::filter(`GP_CFU.g` %notin% NA) %>%
+  dplyr::filter(study_ID %notin% "MA027") %>%
+  ggboxplot(x = "Time_tx", y = "GP_CFU.g", color = "Treatment", palette = "jama", 
+            fill = "Treatment", add = c("jitter"), notch = F, outlier.shape = NA) +
+  labs(x = "Time to treatment", y = "Total Gram-positive CFU/g") + 
+  scale_fill_jama(alpha = 0.5) + 
+  theme(legend.position="right") + 
+  scale_y_continuous(labels = function(x) format(x, scientific = TRUE)) + 
+  stat_pvalue_manual(stat.test,  label = "p", tip.length = 0) +  
+  geom_signif(aes(y = `GP_CFU.g`, x = Time_tx),
+              comparisons = list(c("Day -1","Week 1")), 
+              test = "wilcox.test", test.args=list(alternative = "less", var.equal = FALSE, paired=FALSE), color = "gray40", tip_length = 0.002, y_position = c(8.5e+06)) + 
+  theme(axis.title.x = element_blank())
+
+GPtotal_boxplot
+```
+#GRAM POSITIVES Ceftiofur resistant CFU/g
+##Average Gram-positives resistant to ceftiofur by treatment and time point
+```{r}
+counts_CFU %>% 
+  dplyr::filter(`GP_Cef_CFU.g` %notin% NA, study_ID %notin% "MA027", Time_tx %notin% "Week 11") %>%
+  group_by(Treatment, Time_tx) %>% 
+  summarise(totaGN = mean(`GP_Cef_CFU.g`))
+```
+
+##Difference between time-points per treatment group
+```{r}
+library(dplyr)
+library(rstatix)
+`%notin%` <- Negate(`%in%`)
+
+stat.test <- counts_CFU %>% 
+  dplyr::filter(`GP_Cef_CFU.g` %notin% NA) %>%
+  dplyr::filter(study_ID %notin% "MA027") %>%
+  dplyr::group_by(Treatment) %>%
+  rstatix::wilcox_test(`GP_Cef_CFU.g` ~ Time_tx, alternative = "g", paired = T) %>%
+    rstatix::adjust_pvalue(method = "none") %>%
+  rstatix::add_significance("p")
+stat.test
+```
+
+##Difference between treatments by time point
+```{r}
+library(dplyr)
+library(rstatix)
+`%notin%` <- Negate(`%in%`)
+
+stat.test <- counts_CFU %>% 
+  dplyr::filter(`GP_Cef_CFU.g` %notin% NA) %>%
+  dplyr::filter(study_ID %notin% "MA027") %>%
+  dplyr::filter(Time_tx %in% c("Day -1", "Week 1")) %>%
+  dplyr::group_by(Time_tx) %>%
+  rstatix::wilcox_test(`GP_Cef_CFU.g` ~ Treatment, alternative = "greater", paired = T) %>%
+    rstatix::adjust_pvalue(method = "none") %>%
+  rstatix::add_significance("p") %>%
+  add_xy_position(x = "Time_tx", dodge = 0.8)
+stat.test
+```
+
+##Boxplot
+```{r}
+library(ggpubr)
+library(ggsci)
+GPcef_boxplot = counts_CFU %>% 
+  dplyr::filter(`GP_Cef_CFU.g` %notin% NA) %>%
+  dplyr::filter(study_ID %notin% "MA027") %>%
+  ggboxplot(x = "Time_tx", y = "GP_Cef_CFU.g", color = "Treatment", palette = "jama", 
+            fill = "Treatment", add = c("jitter"), notch = F, outlier.shape = NA) +
+  labs(x = "Time to treatment", y = "Ceftiofur(R) Gram-positive CFU/g") + 
+  scale_fill_jama(alpha = 0.5) + theme(legend.position="right") + 
+  scale_y_continuous(labels = function(x) format(x, scientific = TRUE)) + 
+  theme(axis.title.x = element_blank()) + 
+  stat_pvalue_manual(stat.test,  label = "p", tip.length = 0) +  
+  geom_signif(aes(y = `GP_Cef_CFU.g`, x = Time_tx),
+              comparisons = list(c("Day -1","Week 1")), 
+              test = "wilcox.test", test.args=list(alternative = "less", var.equal = FALSE, paired=FALSE), color = "gray40", tip_length = 0.002, y_position = c(8e+05))
+
+GPcef_boxplot
+```
+
+#GP ceftiofur percentage
+Percentage calculated over the total of Gram-positive per sample
+
+##Average Gram-positives resistant to ceftiofur by treatment and time point
+```{r}
+counts_CFU %>% 
+  dplyr::filter(`GP_Cef_per` %notin% NA, study_ID %notin% "MA027", Time_tx %notin% "Week 11") %>%
+  group_by(Treatment, Time_tx) %>% 
+  summarise(totaGN = mean(`GP_Cef_per`))
+```
+
+##Difference between time-points per treatment group
+```{r}
+library(dplyr)
+library(rstatix)
+`%notin%` <- Negate(`%in%`)
+
+stat.test <- counts_CFU %>% 
+  dplyr::filter(`GP_Cef_per` %notin% NA) %>%
+  dplyr::filter(study_ID %notin% "MA027") %>%
+  dplyr::group_by(Treatment) %>%
+  rstatix::wilcox_test(`GP_Cef_per` ~ Time_tx, alternative = "g", paired = T) %>%
+    rstatix::adjust_pvalue(method = "none") %>%
+  rstatix::add_significance("p")
+stat.test
+```
+
+##Difference between treatments by time point
+```{r}
+library(dplyr)
+library(rstatix)
+`%notin%` <- Negate(`%in%`)
+
+stat.test <- counts_CFU %>% 
+  dplyr::filter(`GP_Cef_per` %notin% NA) %>%
+  dplyr::filter(study_ID %notin% "MA027") %>%
+  dplyr::filter(Time_tx %in% c("Day -1", "Week 1")) %>%
+  dplyr::group_by(Time_tx) %>%
+  rstatix::wilcox_test(`GP_Cef_per` ~ Treatment, alternative = "less", paired = T) %>%
+    rstatix::adjust_pvalue(method = "none") %>%
+  rstatix::add_significance("p") %>%
+  add_xy_position(x = "Time_tx", dodge = 0.8)
+stat.test
+```
+##Boxplot
+```{r}
+library(ggpubr)
+library(ggsci)
+GPcef_boxplot_per = counts_CFU %>% 
+  dplyr::filter(`GP_Cef_per` %notin% NA) %>%
+  dplyr::filter(study_ID %notin% "MA027") %>%
+  ggboxplot(x = "Time_tx", y = "GP_Cef_per", color = "Treatment", palette = "jama", 
+            fill = "Treatment", add = c("jitter"), notch = F, outlier.shape = NA) +
+  labs(x = "Time to treatment", y = "Ceftiofur(R) Gram-positive %") + 
+  scale_fill_jama(alpha = 0.5) + 
+  theme(legend.position="right") + 
+  theme(axis.title.x = element_blank()) + 
+  stat_pvalue_manual(stat.test,  label = "p", tip.length = 0) +  
+  geom_signif(aes(y = `GP_Cef_per`, x = Time_tx),
+              comparisons = list(c("Day -1","Week 1")), 
+              test = "wilcox.test", test.args=list(alternative = "less", var.equal = FALSE, paired=FALSE), 
+              color = "gray40", tip_length = 0.002, y_position = c(90))
+
+GPcef_boxplot_per
+```
+#GP Ampicillin CFU/g
+
+##Average Gram-positives resistant to ampicillin by treatment and time point
+```{r}
+counts_CFU %>% 
+  dplyr::filter(`GP_Amp_CFU.g` %notin% NA, study_ID %notin% "MA027", Time_tx %notin% "Week 11") %>%
+  group_by(Treatment, Time_tx) %>% 
+  summarise(totaGN = mean(`GP_Amp_CFU.g`))
+```
+
+##Difference between time-points per treatment group
+```{r}
+library(dplyr)
+library(rstatix)
+`%notin%` <- Negate(`%in%`)
+
+stat.test <- counts_CFU %>% 
+  dplyr::filter(`GP_Amp_CFU.g` %notin% NA) %>%
+  dplyr::filter(study_ID %notin% "MA027") %>%
+  dplyr::group_by(Treatment) %>%
+  rstatix::wilcox_test(`GP_Amp_CFU.g` ~ Time_tx, alternative = "g", paired = T) %>%
+    rstatix::adjust_pvalue(method = "none") %>%
+  rstatix::add_significance("p")
+stat.test
+```
+
+##Difference between treatments by time point
+```{r}
+library(dplyr)
+library(rstatix)
+`%notin%` <- Negate(`%in%`)
+
+stat.test <- counts_CFU %>% 
+  dplyr::filter(`GP_Amp_CFU.g` %notin% NA) %>%
+  dplyr::filter(study_ID %notin% "MA027") %>%
+  dplyr::filter(Time_tx %in% c("Day -1", "Week 1")) %>%
+  dplyr::group_by(Time_tx) %>%
+  rstatix::wilcox_test(`GP_Amp_CFU.g` ~ Treatment, alternative = "less", paired = T) %>%
+    rstatix::adjust_pvalue(method = "none") %>%
+  rstatix::add_significance("p") %>%
+  add_xy_position(x = "Time_tx", dodge = 0.8)
+stat.test
+```
+
+
+##Boxplot
+```{r}
+library(ggpubr)
+library(ggsci)
+GPamp_boxplot = counts_CFU %>% 
+  dplyr::filter(`GP_Amp_CFU.g` %notin% NA) %>%
+  dplyr::filter(study_ID %notin% "MA027") %>%
+  ggboxplot(x = "Time_tx", y = "GP_Amp_CFU.g", color = "Treatment", palette = "jama", 
+            fill = "Treatment", add = c("jitter"), notch = F, outlier.shape = NA) +
+  labs(x = "Time to treatment", y = "Ampicillin(R) Gram-positive CFU/g") + 
+  scale_fill_jama(alpha = 0.5) + theme(legend.position="right") + 
+  scale_y_continuous(labels = function(x) format(x, scientific = TRUE)) + 
+  theme(axis.title.x = element_blank()) + 
+  stat_pvalue_manual(stat.test,  label = "p", tip.length = 0) +  
+  geom_signif(aes(y = `GP_Amp_CFU.g`, x = Time_tx),
+              comparisons = list(c("Day -1","Week 1")), 
+              test = "wilcox.test", test.args=list(alternative = "less", var.equal = FALSE, paired=FALSE), 
+              color = "gray40", tip_length = 0.002, y_position = c(1.8e+05))
+
+GPamp_boxplot
+```
+
+#GP Ampicillin percentage
+Percentage calculated over the total of Gram-positive per sample
+
+##Average Gram-positives resistant to ampicillin by treatment and time point
+```{r}
+counts_CFU %>% 
+  dplyr::filter(`GP_Amp_per` %notin% NA, study_ID %notin% "MA027", Time_tx %notin% "Week 11") %>%
+  group_by(Treatment, Time_tx) %>% 
+  summarise(totaGN = mean(`GP_Amp_per`))
+```
+
+##Difference between time-points per treatment group
+```{r}
+library(dplyr)
+library(rstatix)
+`%notin%` <- Negate(`%in%`)
+
+stat.test <- counts_CFU %>% 
+  dplyr::filter(`GP_Amp_per` %notin% NA) %>%
+  dplyr::filter(study_ID %notin% "MA027") %>%
+  dplyr::group_by(Treatment) %>%
+  rstatix::wilcox_test(`GP_Amp_per` ~ Time_tx, alternative = "g", paired = T) %>%
+    rstatix::adjust_pvalue(method = "none") %>%
+  rstatix::add_significance("p")
+stat.test
+```
+
+##Difference between treatments by time point
+```{r}
+library(dplyr)
+library(rstatix)
+`%notin%` <- Negate(`%in%`)
+
+stat.test <- counts_CFU %>% 
+  dplyr::filter(`GP_Amp_per` %notin% NA) %>%
+  dplyr::filter(study_ID %notin% "MA027") %>%
+  dplyr::filter(Time_tx %in% c("Day -1", "Week 1")) %>%
+  dplyr::group_by(Time_tx) %>%
+  rstatix::wilcox_test(`GP_Amp_per` ~ Treatment, alternative = "less", paired = T) %>%
+    rstatix::adjust_pvalue(method = "none") %>%
+  rstatix::add_significance("p") %>%
+  add_xy_position(x = "Time_tx", dodge = 0.8)
+stat.test
+```
+##Gram-positives resistant to ampicillin percentage plot
+```{r}
+library(ggpubr)
+library(ggsci)
+GPamp_boxplot_per = counts_CFU %>% 
+  dplyr::filter(`GP_Amp_per` %notin% NA) %>%
+  dplyr::filter(study_ID %notin% "MA027") %>%
+  ggboxplot(x = "Time_tx", y = "GP_Amp_per", color = "Treatment", palette = "jama", 
+            fill = "Treatment", add = c("jitter"), notch = F, outlier.shape = NA) +
+  labs(x = "Time to treatment", y = "Ampicillin(R) Gram-positive %") + 
+  scale_fill_jama(alpha = 0.5) + theme(legend.position="right") + 
+  theme(axis.title.x = element_blank()) + 
+  stat_pvalue_manual(stat.test,  label = "p", tip.length = 0) +  
+  geom_signif(aes(y = `GP_Amp_per`, x = Time_tx),
+              comparisons = list(c("Day -1","Week 1")), 
+              test = "wilcox.test", test.args=list(alternative = "less", var.equal = FALSE, paired=FALSE), 
+              color = "gray40", tip_length = 0.002, y_position = c(40))
+
+GPamp_boxplot_per
+```
+
+```{r fig.height=10, fig.width=9}
+culture_plots <- ggarrange(total_line, GPtotal_boxplot, cef_line, GPcef_boxplot, amp_line, GPamp_boxplot, nrow = 3,ncol = 2, common.legend = T, labels = c("A","B","C","D","E","F"), widths = c(1,.5,1,.5,1,.5))
+culture_plots
+```
+
+```{r}
+setwd("/Users/karlavasco/OneDrive\ -\ Michigan\ State\ University/Manning_lab/Mastitis_project/figures/culture")
+ggsave("culture_plots_KW.png", plot = culture_plots, width = 9, height = 12)
+```
+
+```{r fig.height=10, fig.width=9}
+culture_plots_per <- ggarrange(cef_line_per, GPcef_boxplot_per, amp_line_per, GPamp_boxplot_per, nrow = 2,ncol = 2, common.legend = T, labels = c("A","B","C","D"), widths = c(1,.5,1,.5))
+culture_plots_per
+```
+
+```{r}
+setwd("/Users/karlavasco/OneDrive\ -\ Michigan\ State\ University/Manning_lab/Mastitis_project/figures/culture")
+ggsave("culture_plots_res_per.png", plot = culture_plots_per, width = 9, height = 9)
+```
+
+#Comparison percentage of Gram-positive resistant to ceftiofur vs. ampicillin within samples
+```{r}
+wilcox.test(counts_CFU$GP_Cef_per, counts_CFU$GP_Amp_per)
+```
+
+#Comparison percentage of Gram-negative resistant to ceftiofur vs. ampicillin within samples
+```{r}
+wilcox.test(counts_CFU$GN_Cef_per, counts_CFU$GN_Amp_per)
+```
+
+#Comparison prevalence Gram-positive ceftiofur resistant between treatments
+```{r}
+antibiotic <- counts_CFU %>% filter(Treatment %in% "Antibiotic",  Time_tx %in% c("Day -1", "Week 1"))
+control <- counts_CFU %>% filter(Treatment %in% "Control", Time_tx %in% c("Day -1", "Week 1"))
+
+prevalence_GPcef_antibiotic <- ifelse(antibiotic$GP_Cef_per>0,1,0)
+prevalence_GPcef_control <- ifelse(control$GP_Cef_per>0,1,0)
+
+wilcox.test(prevalence_GPcef_antibiotic, prevalence_GPcef_control)
+```
+#Comparison prevalence Gram-positive ampicillin resistant between treatments
+```{r}
+prevalence_GPamp_antibiotic <- ifelse(antibiotic$GP_Amp_per>0,1,0)
+#prevalence_GPamp_antibiotic[is.na(prevalence_GPamp_antibiotic)] = 0
+
+prevalence_GPamp_control <- ifelse(control$GP_Amp_per>0,1,0)
+#prevalence_GPamp_control[is.na(prevalence_GPamp_control)] = 0
+
+wilcox.test(prevalence_GPamp_antibiotic, prevalence_GPamp_control)
+```
+
+#Comparison prevalence Gram-negative ceftiofur resistant between treatments
+```{r}
+antibiotic_GN <- counts_CFU %>% filter(Treatment %in% "Antibiotic",  Time_tx %notin% c("Week 11"))
+control_GN <- counts_CFU %>% filter(Treatment %in% "Control", Time_tx %notin% c("Week 11"))
+
+prevalence_GNcef_antibiotic <- ifelse(antibiotic_GN$GN_Cef_per>0,1,0)
+prevalence_GNcef_antibiotic[is.na(prevalence_GNcef_antibiotic)] = 0
+
+prevalence_GNcef_control <- ifelse(control_GN$GN_Cef_per>0,1,0)
+prevalence_GNcef_control[is.na(prevalence_GNcef_control)] = 0
+
+wilcox.test(prevalence_GNcef_antibiotic, prevalence_GNcef_control)
+```
+#Comparison prevalence Gram-negative ampicillin resistant between treatments
+```{r}
+prevalence_GNamp_antibiotic <- ifelse(antibiotic_GN$GN_Amp_per>0,1,0)
+prevalence_GNamp_antibiotic[is.na(prevalence_GNamp_antibiotic)] = 0
+
+prevalence_GNamp_control <- ifelse(control_GN$GN_Amp_per>0,1,0)
+prevalence_GNamp_control[is.na(prevalence_GNamp_control)] = 0
+
+wilcox.test(prevalence_GNamp_antibiotic, prevalence_GNamp_control)
+```
+#Comparison variation of CFU/g Gram-negative resistant to ampicillin
+```{r}
+GN_counts <- counts_CFU %>% dplyr::filter(study_ID %notin% "MA027", Time_tx %notin% "Week 11")
+kruskal.test(GN_counts$GN_Amp_CFU.g ~ GN_counts$Time_tx)
+```
+
+#Comparison variation of CFU/g Gram-negative resistant to ceftiofur
+```{r}
+kruskal.test(GN_counts$GN_Cef_CFU.g ~ GN_counts$Time_tx)
+```
+
+#Comparison variation of % Gram-negative resistant to ceftiofur
+```{r}
+kruskal.test(GN_counts$GN_Cef_per ~ GN_counts$Time_tx)
+```
+
+#Comparison variation of % Gram-negative resistant to ampicillin
+```{r}
+kruskal.test(GN_counts$GN_Amp_per ~ GN_counts$Time_tx)
+```
+
+#CEFTIOFUR resistant isolates
+```{r}
+#Import tables
+setwd("~/OneDrive - Michigan State University/Manning_lab/Mastitis_project/GitHub/data/")
+cef_strains <- read.csv("ceftiofur_resistant_isolates.csv")
+cef_strains$Treatment <- factor(cef_strains$Treatment, levels = c("Control", "Antibiotic"))
+```
+
+#Number of isolates per treatment
+```{r}
+cef_strains %>% 
+  group_by(Treatment) %>%
+  summarise(total_isolates=sum(Isolates))
+```
+#Plot showing the number of isolates per sampling point and treatment group
+```{r}
+cef_strains$Time_tx <- factor(cef_strains$Time_tx, levels = c("Day -1", "Week 1", "Week 2", "Week 3", "Week 5", "Week 7", "Week 9", "Week 11"))
+
+cef_strains_number <-cef_strains %>% 
+  group_by(Time_tx, Treatment) %>%
+  summarise(total_isolates=sum(Isolates)) %>% 
+  ggbarplot(x = "Time_tx", y = "total_isolates", color = "Treatment", fill="Treatment",  
+            lab.pos = "in", label = T, lab.col = "black", 
+            ylab = "Number of isolates", 
+            xlab = "Time to treatment", 
+            palette = "jama") 
+cef_strains_number
+```
+

@@ -1,0 +1,388 @@
+---
+title: "R Notebook"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r}
+library(dplyr)
+
+setwd("~/OneDrive\ -\ Michigan\ State\ University/Manning_lab/Mastitis_project/GitHub/data/")
+
+ARGs <- read.table("abundance_ARGs_abs_COSMOS-ID.tsv", sep = "\t", header = TRUE,  na.strings = "", check.names = F) 
+metadata =read.table("metadata.csv", sep = ",", header = TRUE,  na.strings = "")
+metadata$Treatment <- factor(metadata$Treatment, levels = c("Control", "Antibiotic"))
+```
+
+#BETA-LACTAMS
+```{r}
+betalactam_mx <- ARGs %>% 
+  select(Drug_Class, metadata$Name)
+
+library(reshape2)
+betalactam_df <- betalactam_mx %>% 
+  melt(id = colnames(betalactam_mx)[1]) %>% 
+  dplyr::rename(Name = variable, Abundance = value) %>% 
+  group_by(Drug_Class, Name) %>% 
+  dplyr::filter(Drug_Class %in% "Beta-lactam") %>% 
+  summarise(Abundance_score = sum(Abundance)) %>% 
+  merge(metadata)
+```
+
+##Difference between day -1 and week 1 within the same treatment group
+```{r}
+library(dplyr)
+library(rstatix)
+`%notin%` <- Negate(`%in%`)
+
+stat.test <- betalactam_df %>% 
+  dplyr::filter(`Abundance_score` %notin% NA, study_ID %notin% "MA027", Time_tx %notin% "Week 11") %>%
+  filter(Time_tx %in% c("Week 1", "Day -1")) %>% 
+  dplyr::group_by(Treatment) %>%
+  rstatix::wilcox_test(`Abundance_score` ~ Time_tx, alternative = "less", paired = T) %>%
+ rstatix::adjust_pvalue(method = "none") %>%
+  rstatix::add_significance("p.adj")
+stat.test
+```
+
+##Difference between treatment groups by time point (day -1, week 1-5), PAIRED TEST 
+```{r}
+library(dplyr)
+library(rstatix)
+`%notin%` <- Negate(`%in%`)
+
+stat.test <- betalactam_df %>% 
+  dplyr::filter(`Abundance_score` %notin% NA, study_ID %notin% "MA027", Time_tx %notin% c("Week 9")) %>% #Filtering MA027 because it was drawn from the study in week 1. Not including weeks 7 and 9 because one animal was drawn from the study in week 7 (see chunk below) and the analysis could not be paired for those weeks. Not including Week 11 because we only took samples of 4 out of 20 animals in that week.
+  dplyr::group_by(Time_tx) %>%
+  rstatix::wilcox_test(`Abundance_score` ~ Treatment, alternative = "less", paired = T) %>%
+ rstatix::adjust_pvalue(method = "none") %>%
+  rstatix::add_significance("p.adj")
+stat.test
+```
+
+##Difference between treatment groups by time point, weeks 7 and 9 PAIRED (1 cow was draw of the study on week7)
+```{r}
+library(dplyr)
+library(rstatix)
+`%notin%` <- Negate(`%in%`)
+
+stat.test <- betalactam_df %>% 
+  dplyr::filter(`Abundance_score` %notin% NA, study_ID %notin% c("MA027","MA028"), Time_tx %in% c("Week 9")) %>% #Filtering MA028 because it was paired with MA029 which was drawn from the study on week 7
+  dplyr::group_by(Time_tx) %>%
+  rstatix::wilcox_test(`Abundance_score` ~ Treatment, alternative = "less", paired = T) %>%
+ rstatix::adjust_pvalue(method = "none") %>%
+  rstatix::add_significance("p.adj")
+stat.test
+```
+
+##Significance over the time period (regardless of treatment)
+```{r}
+stat.test <- betalactam_df %>% 
+  dplyr::filter(`Abundance_score` %notin% NA) %>%
+  kruskal_test(`Abundance_score` ~ Time_tx) 
+stat.test
+```
+
+##Beta-lactams plot
+```{r}
+library(ggpubr)
+library(ggsci)
+betalactam_plot <- betalactam_df %>% 
+  ggline(x = "Time_tx", y = "Abundance_score", color = "Treatment", add = c("mean_se"),  
+         ylab = "Abundance Score", palette = "jama") + 
+  scale_y_continuous(labels = function(x) format(x, scientific = TRUE)) +  
+  annotate("text", x = 1, y = 2.3e+04, label = expression("0.565"), colour = "black") +  
+  annotate("text", x = 2, y = 3.5e+04, label = expression("0.013"), colour = "black") +  
+  annotate("text", x = 3, y = 3.2e+04, label = expression("0.435"), colour = "black") +  
+  annotate("text", x = 4, y = 3.5e+04, label = expression("0.013"), colour = "black") +  
+  annotate("text", x = 2.5, y = 5e+04, label = expression(bold("Beta-lactams"))) +
+  annotate("text", x = 1.5, y = 4.7e+04, label = expression(paste("Kruskal-Wallis, ", paste(italic('p'))," = 5.78e-05"))) +
+  geom_signif(aes(y = `Abundance_score`, x = Time_tx),comparisons = list(c("Day -1","Week 1"),
+                                                                 c("Week 1","Week 5"),
+                                                                 c("Week 5","Week 9")), 
+              test = "wilcox.test", y_position = c(3.5e+04,4e+04,3.5e+04), color = "gray40", tip_length = 0.002, test.args=list(alternative = "two.sided", var.equal = FALSE, paired=FALSE)) + 
+  theme(axis.title.x = element_blank())
+
+betalactam_plot
+```
+
+#bla-CFXA
+```{r}
+genes_mx <- ARGs %>% 
+  select(ARG_group, metadata$Name)
+
+library(reshape2)
+cfxa_df <- genes_mx %>% 
+  melt(id = colnames(genes_mx)[1]) %>% 
+  dplyr::rename(Name = variable, Abundance = value) %>% 
+  group_by(ARG_group, Name) %>% 
+  dplyr::filter(ARG_group %in% "blaCFXA") %>% 
+  summarise(Abundance_score = sum(Abundance)) %>% 
+  merge(metadata)
+```
+
+##Difference between day -1 and week 1 within the same treatment group
+```{r}
+library(dplyr)
+library(rstatix)
+`%notin%` <- Negate(`%in%`)
+
+stat.test <- cfxa_df %>% 
+  dplyr::filter(`Abundance_score` %notin% NA, study_ID %notin% "MA027", Time_tx %notin% "Week 11") %>%
+  filter(Time_tx %in% c("Week 1", "Day -1")) %>% 
+  dplyr::group_by(Treatment) %>%
+  rstatix::wilcox_test(`Abundance_score` ~ Time_tx, alternative = "less", paired = T) %>%
+ rstatix::adjust_pvalue(method = "none") %>%
+  rstatix::add_significance("p.adj")
+stat.test
+```
+
+##Difference between treatment groups by time point (day -1, week 1-5), PAIRED TEST 
+```{r}
+library(dplyr)
+library(rstatix)
+`%notin%` <- Negate(`%in%`)
+
+stat.test <- cfxa_df %>% 
+  dplyr::filter(`Abundance_score` %notin% NA, study_ID %notin% "MA027", Time_tx %notin% c("Week 9")) %>% #Filtering MA027 because it was drawn from the study in week 1. Not including weeks 7 and 9 because one animal was drawn from the study in week 7 (see chunk below) and the analysis could not be paired for those weeks. Not including Week 11 because we only took samples of 4 out of 20 animals in that week.
+  dplyr::group_by(Time_tx) %>%
+  rstatix::wilcox_test(`Abundance_score` ~ Treatment, alternative = "less", paired = T) %>%
+ rstatix::adjust_pvalue(method = "none") %>%
+  rstatix::add_significance("p.adj")
+stat.test
+```
+
+##Difference between treatment groups by time point, weeks 7 and 9 PAIRED (1 cow was draw of the study on week7)
+```{r}
+library(dplyr)
+library(rstatix)
+`%notin%` <- Negate(`%in%`)
+
+stat.test <- cfxa_df %>% 
+  dplyr::filter(`Abundance_score` %notin% NA, study_ID %notin% c("MA027","MA028"), Time_tx %in% c("Week 9")) %>% #Filtering MA028 because it was paired with MA029 which was drawn from the study on week 7
+  dplyr::group_by(Time_tx) %>%
+  rstatix::wilcox_test(`Abundance_score` ~ Treatment, alternative = "less", paired = T) %>%
+ rstatix::adjust_pvalue(method = "none") %>%
+  rstatix::add_significance("p.adj")
+stat.test
+```
+
+##Significance over the time period (regardless of treatment)
+```{r}
+stat.test <- cfxa_df %>% 
+  dplyr::filter(`Abundance_score` %notin% NA) %>%
+  kruskal_test(`Abundance_score` ~ Time_tx) 
+stat.test
+```
+
+##CFXA plot
+```{r}
+library(ggpubr)
+cfxa_plot <- cfxa_df %>% 
+  ggline(x = "Time_tx", y = "Abundance_score", color = "Treatment", add = c("mean_se"),  
+         ylab = "Abundance Score", palette = "jama") + 
+  scale_y_continuous(labels = function(x) format(x, scientific = TRUE)) +  
+  annotate("text", x = 1, y = 2.3e+04, label = expression("0.594"), colour = "black") +  
+  annotate("text", x = 2, y = 3.5e+04, label = expression("0.015"), colour = "black") +  
+  annotate("text", x = 3, y = 3.2e+04, label = expression("0.622"), colour = "black") +  
+  annotate("text", x = 4, y = 3.5e+04, label = expression("0.016"), colour = "black") +  
+    annotate("text", x = 2.5, y = 5e+04, label = expression(bolditalic("bla-CFXA"))) +
+  annotate("text", x = 1.5, y = 4.7e+04, label = expression(paste("Kruskal-Wallis, ", paste(italic('p'))," = 0.0001"))) +
+  geom_signif(aes(y = `Abundance_score`, x = Time_tx),comparisons = list(c("Day -1","Week 1"),
+                                                                 c("Week 1","Week 5"),
+                                                                 c("Week 5","Week 9")), 
+              test = "wilcox.test", y_position = c(3.5e+04,4e+04,3.5e+04), color = "gray40", tip_length = 0.002, test.args=list(alternative = "two.sided", var.equal = FALSE, paired=FALSE)) + 
+  theme(axis.title.x = element_blank())
+
+cfxa_plot
+```
+
+#bla-CMY
+```{r}
+library(reshape2)
+cmy_df <- genes_mx %>% 
+  melt(id = colnames(genes_mx)[1]) %>% 
+  dplyr::rename(Name = variable, Abundance = value) %>% 
+  group_by(ARG_group, Name) %>% 
+  dplyr::filter(ARG_group %in% "blaCMY") %>% 
+  summarise(Abundance_score = sum(Abundance)) %>% 
+  merge(metadata)
+```
+
+##Difference between day -1 and week 1 within the same treatment group
+```{r}
+library(dplyr)
+library(rstatix)
+`%notin%` <- Negate(`%in%`)
+
+stat.test <- cmy_df %>% 
+  dplyr::filter(`Abundance_score` %notin% NA, study_ID %notin% "MA027", Time_tx %notin% "Week 11") %>%
+  filter(Time_tx %in% c("Week 1", "Day -1")) %>% 
+  dplyr::group_by(Treatment) %>%
+  rstatix::wilcox_test(`Abundance_score` ~ Time_tx, alternative = "less", paired = T) %>%
+ rstatix::adjust_pvalue(method = "none") %>%
+  rstatix::add_significance("p.adj")
+stat.test
+```
+
+##Difference between treatment groups by time point (day -1, week 1-5), PAIRED TEST 
+```{r}
+library(dplyr)
+library(rstatix)
+`%notin%` <- Negate(`%in%`)
+
+stat.test <- cmy_df %>% 
+  dplyr::filter(`Abundance_score` %notin% NA, study_ID %notin% "MA027", Time_tx %notin% c("Week 9")) %>% #Filtering MA027 because it was drawn from the study in week 1. Not including weeks 7 and 9 because one animal was drawn from the study in week 7 (see chunk below) and the analysis could not be paired for those weeks. Not including Week 11 because we only took samples of 4 out of 20 animals in that week.
+  dplyr::group_by(Time_tx) %>%
+  rstatix::wilcox_test(`Abundance_score` ~ Treatment, alternative = "less", paired = T) %>%
+ rstatix::adjust_pvalue(method = "none") %>%
+  rstatix::add_significance("p.adj")
+stat.test
+```
+
+##Difference between treatment groups by time point, weeks 7 and 9 PAIRED (1 cow was draw of the study on week7)
+```{r}
+library(dplyr)
+library(rstatix)
+`%notin%` <- Negate(`%in%`)
+
+stat.test <- cmy_df %>% 
+  dplyr::filter(`Abundance_score` %notin% NA, study_ID %notin% c("MA027","MA028"), Time_tx %in% c("Week 9")) %>% #Filtering MA028 because it was paired with MA029 which was drawn from the study on week 7
+  dplyr::group_by(Time_tx) %>%
+  rstatix::wilcox_test(`Abundance_score` ~ Treatment, alternative = "less", paired = T) %>%
+ rstatix::adjust_pvalue(method = "none") %>%
+  rstatix::add_significance("p.adj")
+stat.test
+```
+
+##Significance over the time period (regardless of treatment)
+```{r}
+stat.test <- cmy_df %>% 
+  dplyr::filter(`Abundance_score` %notin% NA) %>%
+  kruskal_test(`Abundance_score` ~ Time_tx) 
+stat.test
+```
+
+##CMY plot
+```{r}
+library(ggpubr)
+cmy_plot <- cmy_df %>% 
+  ggline(x = "Time_tx", y = "Abundance_score", color = "Treatment", add = c("mean_se"),  
+         ylab = "Abundance Score", palette = "jama") + 
+  scale_y_continuous(labels = function(x) format(x, scientific = TRUE)) +  
+  annotate("text", x = 1, y = 5e+02, label = expression("0.963"), colour = "black") +  
+  annotate("text", x = 2, y = 5e+02, label = expression("0.181"), colour = "black") +  
+  annotate("text", x = 3, y = 7.8e+02, label = expression("0.091"), colour = "black") +  
+  annotate("text", x = 4, y = 7e+02, label = expression("0.03"), colour = "black") +  
+      annotate("text", x = 2.5, y = 1.1e+03, label = expression(bolditalic("bla-CMY"))) +
+  annotate("text", x = 1.5, y = 1e+03, label = expression(paste("Kruskal-Wallis, ", paste(italic('p'))," = 0.66"))) +
+  geom_signif(aes(y = `Abundance_score`, x = Time_tx),comparisons = list(c("Day -1","Week 1"),
+                                                                 c("Week 1","Week 5"),
+                                                                 c("Week 5","Week 9")), 
+              test = "wilcox.test", y_position = c(3e+02,5e+02,5.5e+02), color = "gray40", tip_length = 0.002, test.args=list(alternative = "two.sided", var.equal = FALSE, paired=FALSE)) + 
+  theme(axis.title.x = element_blank())
+
+cmy_plot
+```
+
+#blc
+```{r}
+library(reshape2)
+blc_df <- genes_mx %>% 
+  melt(id = colnames(genes_mx)[1]) %>% 
+  dplyr::rename(Name = variable, Abundance = value) %>% 
+  group_by(ARG_group, Name) %>% 
+  dplyr::filter(ARG_group %in% "blc") %>% 
+  summarise(Abundance_score = sum(Abundance)) %>% 
+  merge(metadata)
+```
+
+##Difference between day -1 and week 1 within the same treatment group
+```{r}
+library(dplyr)
+library(rstatix)
+`%notin%` <- Negate(`%in%`)
+
+stat.test <- blc_df %>% 
+  dplyr::filter(`Abundance_score` %notin% NA, study_ID %notin% "MA027", Time_tx %notin% "Week 11") %>%
+  filter(Time_tx %in% c("Week 1", "Day -1")) %>% 
+  dplyr::group_by(Treatment) %>%
+  rstatix::wilcox_test(`Abundance_score` ~ Time_tx, alternative = "less", paired = T) %>%
+ rstatix::adjust_pvalue(method = "none") %>%
+  rstatix::add_significance("p.adj")
+stat.test
+```
+
+##Difference between treatment groups by time point (day -1, week 1-5), PAIRED TEST 
+```{r}
+library(dplyr)
+library(rstatix)
+`%notin%` <- Negate(`%in%`)
+
+stat.test <- blc_df %>% 
+  dplyr::filter(`Abundance_score` %notin% NA, study_ID %notin% "MA027", Time_tx %notin% c("Week 9")) %>% #Filtering MA027 because it was drawn from the study in week 1. Not including weeks 7 and 9 because one animal was drawn from the study in week 7 (see chunk below) and the analysis could not be paired for those weeks. Not including Week 11 because we only took samples of 4 out of 20 animals in that week.
+  dplyr::group_by(Time_tx) %>%
+  rstatix::wilcox_test(`Abundance_score` ~ Treatment, alternative = "less", paired = T) %>%
+ rstatix::adjust_pvalue(method = "none") %>%
+  rstatix::add_significance("p.adj")
+stat.test
+```
+
+##Difference between treatment groups by time point, weeks 7 and 9 PAIRED (1 cow was draw of the study on week7)
+```{r}
+library(dplyr)
+library(rstatix)
+`%notin%` <- Negate(`%in%`)
+
+stat.test <- blc_df %>% 
+  dplyr::filter(`Abundance_score` %notin% NA, study_ID %notin% c("MA027","MA028"), Time_tx %in% c("Week 9")) %>% #Filtering MA028 because it was paired with MA029 which was drawn from the study on week 7
+  dplyr::group_by(Time_tx) %>%
+  rstatix::wilcox_test(`Abundance_score` ~ Treatment, alternative = "less", paired = T) %>%
+ rstatix::adjust_pvalue(method = "none") %>%
+  rstatix::add_significance("p.adj")
+stat.test
+```
+
+##Significance over the time period (regardless of treatment)
+```{r}
+stat.test <- blc_df %>% 
+  dplyr::filter(`Abundance_score` %notin% NA) %>%
+  kruskal_test(`Abundance_score` ~ Time_tx) 
+stat.test
+```
+
+##Beta-lactams plot
+```{r}
+library(ggpubr)
+blc_plot <- blc_df %>% 
+  ggline(x = "Time_tx", y = "Abundance_score", color = "Treatment", add = c("mean_se"),  
+         ylab = "Abundance Score", palette = "jama") + 
+  scale_y_continuous(labels = function(x) format(x, scientific = TRUE)) +  
+  annotate("text", x = 1, y = 1.2e+02, label = expression("0.500"), colour = "black") +  
+  annotate("text", x = 2, y = 1.05e+03, label = expression("0.078"), colour = "black") +  
+  annotate("text", x = 3, y = 8.05e+02, label = expression("0.011"), colour = "black") +  
+  annotate("text", x = 4, y = 7e+02, label = expression("0.091"), colour = "black") +  
+  annotate("text", x = 2.5, y = 1.5e+03, label = expression(bolditalic("blc"))) +
+  annotate("text", x = 1.5, y = 1.4e+03, label = expression(paste("Kruskal-Wallis, ", paste(italic('p'))," = 0.0152"))) +
+  geom_signif(aes(y = `Abundance_score`, x = Time_tx),comparisons = list(c("Day -1","Week 1"),
+                                                                 c("Week 1","Week 5"),
+                                                                 c("Week 5","Week 9")), 
+              test = "wilcox.test", y_position = c(.9e+03,1e+03,7e+02), color = "gray40", tip_length = 0.002, test.args=list(alternative = "two.sided", var.equal = FALSE, paired=FALSE)) + 
+  theme(axis.title.x = element_blank())
+
+blc_plot
+```
+
+#Arranging plots in one figure
+```{r fig.width=12, fig.height=8}
+betalactam_plots <- ggarrange(betalactam_plot, cfxa_plot, cmy_plot, blc_plot, labels = c("A", "B","C","D"), nrow = 2, ncol = 2, common.legend = T)
+betalactam_plots
+```
+
+```{r}
+setwd("~/OneDrive\ -\ Michigan\ State\ University/Manning_lab/Mastitis_project/figures")
+
+ggsave(plot = betalactam_plots, "betalactam_line_plots.png", width = 12, height = 8)
+```
+
