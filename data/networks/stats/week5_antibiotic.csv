@@ -1,0 +1,294 @@
+Id,Label,timeset,abundance,type,class,gene,Degree,Weighted Degree,Eccentricity,closnesscentrality,harmonicclosnesscentrality,betweenesscentrality,Authority,Hub,modularity_class,pageranks,componentnumber,clustering,triangles,eigencentrality
+176,Actinobacteria_u_g,,4.41,Taxa,Actinobacteria_u_f,Actinobacteria_u_g,7,5.077732,7,0.270115,0.325279,94.891131,0.004881,0.004881,2,0.005999,0,0.380952,8,0.027009
+193,Alkaliphilus,,15.26,Taxa,Clostridiaceae,Alkaliphilus,2,1.195934,8,0.222749,0.256493,0,0.000752,0.000752,2,0.002309,0,1,1,0.005639
+179,Alphaproteobacteria_u_g,,26.73,Taxa,Alphaproteobacteria_u_f,Alphaproteobacteria_u_g,7,4.596794,7,0.284848,0.352229,174.519306,0.011465,0.011465,2,0.005587,0,0.333333,7,0.052786
+50,acrE,,483.95,ARG,MDR,acrE,15,12.341612,5,0.380054,0.446099,133.902867,0.021198,0.021198,8,0.006849,0,0.819048,86,0.166679
+180,Anaeromyxobacter,,2.56,Taxa,Anaeromyxobacteraceae,Anaeromyxobacter,11,6.723041,6,0.306522,0.360993,175.915457,0.009143,0.009143,8,0.005802,0,0.672727,37,0.092552
+252,Anaerococcus,,3.15,Taxa,Peptoniphilaceae,Anaerococcus,22,17.973585,6,0.378016,0.473522,97.998729,0.15676,0.15676,6,0.007466,0,0.809524,187,0.648989
+81,astA,,993.24,Virulence,N-succinyltransferase,astA,33,23.967423,6,0.377005,0.499527,427.850102,0.239619,0.239619,0,0.010527,0,0.55303,292,0.971945
+175,Acidithiobacillus,,29.38,Taxa,Acidithiobacillaceae,Acidithiobacillus,4,2.232382,6,0.286004,0.320449,25.006759,0.000391,0.000391,7,0.003175,0,0.666667,4,0.01416
+183,Bacillus,,912.45,Taxa,Bacillaceae,Bacillus,11,6.411928,6,0.306522,0.363712,66.015008,0.002202,0.002202,7,0.006063,0,0.618182,34,0.071332
+82,blc,,5157.49,ARG,Beta-lactam,blc,3,2.129453,7,0.255435,0.295255,10.216529,0.003782,0.003782,2,0.002746,0,0.666667,2,0.019065
+90,blc 3334641,,5068.24,ARG,Beta-lactam,blc 3334641,5,3.086607,6,0.274854,0.318203,142.86228,0.001378,0.001378,2,0.004232,0,0.3,3,0.014697
+194,Butyricicoccus,,267.27,Taxa,Clostridiaceae,Butyricicoccus,9,5.18176,5,0.360614,0.412293,518.197769,0.059789,0.059789,7,0.004101,0,0.5,18,0.24928
+192,Catabacter,,2430.24,Taxa,Catabacteriaceae,Catabacter,8,4.706099,5,0.356061,0.409811,203.586845,0.011196,0.011196,7,0.004387,0,0.321429,9,0.076489
+195,Caloramator,,10.48,Taxa,Clostridiaceae,Caloramator,5,2.94044,7,0.238983,0.276022,140.25,0.000061,0.000061,3,0.005588,0,0.5,5,0.00936
+219,Cetobacterium,,2.59,Taxa,Fusobacteriaceae,Cetobacterium,10,6.55303,6,0.30989,0.368676,436.891453,0.000553,0.000553,3,0.008601,0,0.377778,17,0.02385
+14,blaACI 1,,58737.97,ARG,Beta-lactam,blaACI 1,8,4.886849,7,0.293139,0.355167,179.731291,0.007938,0.007938,2,0.004695,0,0.714286,20,0.051284
+5,cfxA 2366,,30289.61,ARG,Beta-lactam,cfxA 2366,7,5.028393,7,0.258716,0.304677,8.224803,0.002462,0.002462,2,0.004375,0,0.952381,20,0.026708
+97,cfxA 32395282,,80216.39,ARG,Beta-lactam,cfxA 32395282,5,2.704454,6,0.273786,0.306974,118.335566,0.000337,0.000337,3,0.004887,0,0.5,5,0.010494
+6,cfxA 2367,,133801.87,ARG,Beta-lactam,cfxA 2367,2,1.175304,6,0.290123,0.320686,144.233854,0.006003,0.006003,3,0.002057,0,0,0,0.026223
+74,cfxA 33413459,,184104.85,ARG,Beta-lactam,cfxA 33413459,14,8.139948,6,0.319005,0.39539,6.689593,0.098767,0.098767,6,0.005091,0,0.945055,86,0.406158
+196,Clostridiales Family XIII. Incertae Sedis_u_g,,4204.11,Taxa,Clostridiales Family XIII. Incertae Sedis,Clostridiales Family XIII. Incertae Sedis_u_g,14,8.63881,6,0.332547,0.403546,145.894254,0.007911,0.007911,7,0.007115,0,0.472527,43,0.104358
+18,blaCMY 27,,5522.98,ARG,Beta-lactam,blaCMY 27,10,8.171425,7,0.272201,0.329855,5.404891,0.000259,0.000259,4,0.005849,0,0.911111,41,0.035904
+83,cmy-13,,2474.33,ARG,Beta-lactam,cmy-13,9,6.345219,7,0.267045,0.320044,3.41404,0.000211,0.000211,4,0.005355,0,0.944444,34,0.032358
+199,Collinsella,,271.49,Taxa,Coriobacteriaceae,Collinsella,10,7.981514,7,0.272201,0.329855,5.404891,0.000259,0.000259,4,0.005849,0,0.911111,41,0.035904
+186,Bacteroidales_u_g,,36327.34,Taxa,Bacteroidales_u_f,Bacteroidales_u_g,1,0.525087,7,0.230769,0.251503,0,0.000021,0.000021,4,0.001712,0,0,0,0.001855
+200,Corynebacterium,,608.68,Taxa,Corynebacteriaceae,Corynebacterium,7,3.875318,6,0.299363,0.347163,499.730225,0.000465,0.000465,4,0.006673,0,0.142857,3,0.014909
+187,Brachyspira,,3.03,Taxa,Brachyspiraceae,Brachyspira,6,3.883678,6,0.30064,0.344917,111.69662,0.000875,0.000875,4,0.004558,0,0.4,6,0.021305
+9,cfxA6,,50403.13,ARG,Beta-lactam,cfxA6,7,4.18115,6,0.312639,0.361466,109.297272,0.000998,0.000998,7,0.00506,0,0.428571,9,0.030386
+59,cpxA,,1569.47,ARG,MDR,cpxA,19,16.605073,6,0.322654,0.420331,1.847108,0.143456,0.143456,0,0.006405,0,0.97076,166,0.578354
+55,crp,,2360.17,ARG,MDR,crp,26,20.425105,6,0.371053,0.475887,120.242775,0.190752,0.190752,6,0.008534,0,0.649231,211,0.780214
+181,Atopobium,,117.66,Taxa,Atopobiaceae,Atopobium,13,7.730838,6,0.305857,0.373522,352.551579,0.00372,0.00372,7,0.006739,0,0.487179,38,0.081468
+264,Cutibacterium,,15.98,Taxa,Propionibacteriaceae,Cutibacterium,9,7.203529,6,0.311947,0.371158,60.976881,0.008262,0.008262,2,0.005182,0,0.805556,29,0.056397
+201,Cytophaga,,5.89,Taxa,Cytophagaceae,Cytophaga,7,4.220225,5,0.327907,0.375414,540.253049,0.013144,0.013144,4,0.004373,0,0.285714,6,0.066765
+203,Deinococcus-Thermus_u_g,,2.83,Taxa,Deinococcus-Thermus_u_f,Deinococcus-Thermus_u_g,15,11.710931,6,0.341404,0.415721,77.776622,0.005596,0.005596,7,0.007374,0,0.752381,79,0.11672
+204,Desulfobulbus,,2.69,Taxa,Desulfobulbaceae,Desulfobulbus,12,8.087849,7,0.288934,0.355978,81.047827,0.00216,0.00216,7,0.006611,0,0.621212,41,0.07503
+205,Desulfomicrobium,,4.92,Taxa,Desulfomicrobiaceae,Desulfomicrobium,15,9.231043,6,0.322654,0.397754,439.584804,0.076005,0.076005,6,0.006981,0,0.542857,57,0.317835
+250,Desulfotomaculum,,3.78,Taxa,Peptococcaceae,Desulfotomaculum,6,3.849493,7,0.272201,0.316734,191.972472,0.000143,0.000143,3,0.005444,0,0.266667,4,0.012968
+173,Candidatus Phytoplasma,,4.82,Taxa,Acholeplasmataceae,Candidatus Phytoplasma,3,2.527557,8,0.223455,0.253183,0,0.000953,0.000953,1,0.002807,0,1,3,0.007673
+227,Dorea,,4.21,Taxa,Lachnospiraceae,Dorea,5,3.989102,7,0.286004,0.337065,59.108294,0.006906,0.006906,1,0.003735,0,0.7,7,0.036862
+65,emrB,,2563.21,ARG,MDR,emrB,31,20.258932,6,0.371053,0.489598,872.880675,0.17577,0.17577,0,0.010733,0,0.48172,224,0.759751
+104,Enterobacteria phage BP-4795,,25.92,Phage,Siphoviridae,Enterobacteria phage BP-4795,5,4.0517,7,0.286004,0.337065,59.108294,0.006906,0.006906,1,0.003735,0,0.7,7,0.036862
+118,Enterobacteria phage cdtI,,46.43,Phage,Siphoviridae,Enterobacteria phage cdtI,21,17.732457,6,0.327907,0.431324,10.446409,0.161113,0.161113,0,0.006965,0,0.87619,184,0.649806
+106,Enterobacteria phage HK140,,3.14,Phage,Siphoviridae,Enterobacteria phage HK140,19,16.605073,6,0.322654,0.420331,1.847108,0.143456,0.143456,0,0.006405,0,0.97076,166,0.578354
+110,Enterobacteria phage IME10,,41.16,Phage,Podoviridae,Enterobacteria phage IME10,23,19.010098,6,0.330986,0.440189,28.821641,0.175793,0.175793,0,0.007536,0,0.778656,197,0.70922
+123,Enterobacteria phage mEp460,,29.83,Phage,Siphoviridae,Enterobacteria phage mEp460,22,17.676282,6,0.334917,0.443144,373.776781,0.153577,0.153577,0,0.00821,0,0.766234,177,0.621085
+112,Enterobacteria phage P4,,56.54,Phage,Caudovirales_u_f,Enterobacteria phage P4,19,14.667411,6,0.342233,0.43156,6.936889,0.146388,0.146388,6,0.006411,0,0.929825,159,0.598438
+113,Enterobacteria phage Sf101,,19.32,Phage,Podoviridae,Enterobacteria phage Sf101,18,13.436493,6,0.321918,0.416785,1.096682,0.133665,0.133665,0,0.006131,0,0.986928,151,0.539187
+114,Enterobacteria phage SfI,,39.1,Phage,Myoviridae,Enterobacteria phage SfI,21,16.36612,6,0.363402,0.452837,271.395585,0.151307,0.151307,6,0.007244,0,0.819048,172,0.620168
+115,Enterobacteria phage SfV,,18.51,Phage,Myoviridae,Enterobacteria phage SfV,23,18.174406,6,0.365285,0.46052,80.857769,0.16781,0.16781,6,0.00775,0,0.735178,186,0.685798
+58,baeS,,869.51,ARG,MDR,baeS,5,3.739886,7,0.277559,0.330328,36.476014,0.007788,0.007788,2,0.003492,0,0.6,6,0.037549
+117,Enterobacteria phage YYZ-2008,,85.61,Phage,Siphoviridae,Enterobacteria phage YYZ-2008,8,5.365149,6,0.291925,0.353191,113.379436,0.02728,0.02728,2,0.004505,0,0.464286,13,0.116169
+212,Erysipelotrichaceae_u_g,,1823.34,Taxa,Erysipelotrichaceae,Erysipelotrichaceae_u_g,5,2.879833,6,0.292531,0.332742,19.911651,0.000885,0.000885,4,0.003485,0,0.6,6,0.021241
+208,Escherichia,,389.04,Taxa,Enterobacteriaceae,Escherichia,16,12.538695,5,0.400568,0.464775,322.510143,0.027205,0.027205,8,0.007153,0,0.733333,88,0.192127
+130,Escherichia phage D108,,28.75,Phage,Myoviridae,Escherichia phage D108,4,2.46226,6,0.310573,0.360638,55.13902,0.005412,0.005412,4,0.002553,0,0.166667,1,0.036428
+134,Escherichia phage TL-2011b,,77.29,Phage,Podoviridae,Escherichia phage TL-2011b,20,14.151705,5,0.391667,0.475414,278.522652,0.136668,0.136668,6,0.00696,0,0.736842,140,0.575721
+119,Escherichia virus fiAA91ss,,46.37,Phage,Myoviridae,Escherichia virus fiAA91ss,15,12.330972,5,0.380054,0.446099,133.902867,0.021198,0.021198,8,0.006849,0,0.819048,86,0.166679
+111,Escherichia virus If1,,5.95,Phage,Inoviridae,Escherichia virus If1,15,12.341612,5,0.380054,0.446099,133.902867,0.021198,0.021198,8,0.006849,0,0.819048,86,0.166679
+145,Escherichia virus P2,,99.6,Phage,Myoviridae,Escherichia virus P2,5,3.769712,7,0.277559,0.330328,36.476014,0.007788,0.007788,2,0.003492,0,0.6,6,0.037549
+135,Escherichia virus phiV10,,6.53,Phage,Podoviridae,Escherichia virus phiV10,22,17.973585,6,0.378016,0.473522,97.998729,0.15676,0.15676,6,0.007466,0,0.809524,187,0.648989
+136,Escherichia virus pro147,,20.28,Phage,Myoviridae,Escherichia virus pro147,9,7.203529,6,0.311947,0.371158,60.976881,0.008262,0.008262,2,0.005182,0,0.805556,29,0.056397
+137,Escherichia virus pro483,,71.59,Phage,Myoviridae,Escherichia virus pro483,21,17.940185,6,0.329439,0.433097,35.422886,0.153928,0.153928,0,0.007157,0,0.852381,179,0.621626
+263,Acidipropionibacterium,,29.62,Taxa,Propionibacteriaceae,Acidipropionibacterium,6,3.825908,7,0.243103,0.287487,126.708081,0.000033,0.000033,3,0.006406,0,0.4,6,0.008205
+146,Escherichia virus Wphi,,37.01,Phage,Myoviridae,Escherichia virus Wphi,5,3.037043,6,0.27593,0.314894,254.116051,0.000452,0.000452,3,0.005101,0,0.3,3,0.011396
+21,evgA,,1401.75,ARG,MDR,evgA,23,19.115726,6,0.330986,0.440189,28.821641,0.175793,0.175793,0,0.007536,0,0.778656,197,0.70922
+216,Firmicutes_u_g,,666.93,Taxa,Firmicutes_u_f,Firmicutes_u_g,10,6.18542,5,0.36911,0.422104,628.260534,0.00691,0.00691,7,0.006493,0,0.266667,12,0.062598
+184,Geobacillus,,27.58,Taxa,Bacillaceae,Geobacillus,11,7.139056,6,0.303879,0.368203,152.019377,0.001084,0.001084,4,0.006281,0,0.545455,30,0.043251
+221,Gordonia,,6.84,Taxa,Gordoniaceae,Gordonia,15,11.710931,6,0.341404,0.415721,77.776622,0.005596,0.005596,7,0.007374,0,0.752381,79,0.11672
+222,Halorubrum,,1.46,Taxa,Halorubraceae,Halorubrum,10,6.55303,6,0.30989,0.368676,436.891453,0.000553,0.000553,3,0.008601,0,0.377778,17,0.02385
+253,Helcococcus,,28.41,Taxa,Peptoniphilaceae,Helcococcus,4,2.447231,6,0.283702,0.321158,105.053149,0.000707,0.000707,7,0.003273,0,0.333333,2,0.01309
+224,Holospora,,78.19,Taxa,Holosporaceae,Holospora,11,8.276723,6,0.295597,0.359456,299.454982,0.00072,0.00072,4,0.006296,0,0.745455,41,0.042489
+217,Imtechella,,27.79,Taxa,Flavobacteriaceae,Imtechella,6,4.337735,8,0.219626,0.265181,44.848566,0.000006,0.000006,3,0.006629,0,0.533333,8,0.007876
+68,int,,579.41,MGE,Plasmid,int,8,5.401796,6,0.311258,0.363121,281.154627,0.00095,0.00095,4,0.0057,0,0.392857,11,0.026409
+240,Kocuria,,81.81,Taxa,Micrococcaceae,Kocuria,2,1.075385,6,0.239796,0.260757,6.958601,0.000025,0.000025,3,0.002498,0,0,0,0.003214
+229,Lachnoclostridium,,1098.65,Taxa,Lachnospiraceae,Lachnoclostridium,10,6.102886,5,0.342233,0.393381,281.93979,0.004457,0.004457,7,0.006207,0,0.355556,16,0.050923
+230,Lachnospira,,1360.72,Taxa,Lachnospiraceae,Lachnospira,2,1.083157,6,0.279208,0.305083,0,0.000339,0.000339,4,0.002265,0,1,1,0.006279
+1,2024 Branch,,616.81,ARG,Aminoglycoside,2024 Branch,1,1,1,1,1,0,0,0,5,0.006011,1,0,0,0.000556
+150,Lactobacillus phage phiAT3,,6.83,Phage,Siphoviridae,Lactobacillus phage phiAT3,1,1,1,1,1,0,0,0,5,0.006011,1,0,0,0.000556
+32,marA,,1427.46,ARG,MDR,marA,19,16.605073,6,0.322654,0.420331,1.847108,0.143456,0.143456,0,0.006405,0,0.97076,166,0.578354
+42,mdtH,,426.29,ARG,MDR,mdtH,22,17.973585,6,0.378016,0.473522,97.998729,0.15676,0.15676,6,0.007466,0,0.809524,187,0.648989
+40,mdtO,,494.48,ARG,MDR,mdtO,15,12.341612,5,0.380054,0.446099,133.902867,0.021198,0.021198,8,0.006849,0,0.819048,86,0.166679
+41,mdtP,,796.6,ARG,MDR,mdtP,5,3.989102,7,0.286004,0.337065,59.108294,0.006906,0.006906,1,0.003735,0,0.7,7,0.036862
+275,Megamonas,,13.87,Taxa,Selenomonadaceae,Megamonas,2,1.306726,6,0.256364,0.283452,0,0.000441,0.000441,3,0.002272,0,1,1,0.007941
+289,Megasphaera,,17.23,Taxa,Veillonellaceae,Megasphaera,30,18.851007,6,0.365285,0.48026,187.157818,0.222755,0.222755,0,0.009576,0,0.565517,246,0.903177
+235,Methanosarcina,,10.45,Taxa,Methanosarcinaceae,Methanosarcina,16,9.772753,6,0.34058,0.418558,217.059482,0.098963,0.098963,6,0.006061,0,0.666667,80,0.41381
+236,Methylobacterium,,3.49,Taxa,Methylobacteriaceae,Methylobacterium,15,11.710931,6,0.341404,0.415721,77.776622,0.005596,0.005596,7,0.007374,0,0.752381,79,0.11672
+239,Microbacterium,,175.34,Taxa,Microbacteriaceae,Microbacterium,6,3.648697,7,0.244367,0.289379,267.495251,0.000058,0.000058,3,0.006043,0,0.4,6,0.011268
+241,Micrococcaceae_u_g,,16.88,Taxa,Micrococcaceae,Micrococcaceae_u_g,15,10.133276,6,0.319728,0.393026,305.924653,0.002817,0.002817,7,0.008047,0,0.580952,61,0.095047
+242,Micromonospora,,16.91,Taxa,Micromonosporaceae,Micromonospora,15,11.710931,6,0.341404,0.415721,77.776622,0.005596,0.005596,7,0.007374,0,0.752381,79,0.11672
+237,Microvirga,,5.6,Taxa,Methylobacteriaceae,Microvirga,23,15.200194,6,0.348148,0.446927,534.753412,0.128221,0.128221,6,0.008765,0,0.581028,147,0.538486
+96,MobA 32395281,,50496.93,MGE,Insertional sequence,MobA 32395281,4,2.10684,7,0.249117,0.281628,4.965871,0.000069,0.000069,3,0.004148,0,0.833333,5,0.008245
+197,Mogibacterium,,27.54,Taxa,Clostridiales Family XIII. Incertae Sedis,Mogibacterium,25,13.933928,5,0.384196,0.477305,1311.494609,0.061211,0.061211,8,0.01037,0,0.266667,80,0.359566
+244,Myxococcaceae_u_g,,1.12,Taxa,Myxococcaceae,Myxococcaceae_u_g,15,11.710931,6,0.341404,0.415721,77.776622,0.005596,0.005596,7,0.007374,0,0.752381,79,0.11672
+182,Olsenella,,252.81,Taxa,Atopobiaceae,Olsenella,11,9.15939,6,0.305195,0.358629,1.221848,0.009978,0.009978,8,0.005235,0,0.981818,54,0.102741
+256,Paeniclostridium,,10.01,Taxa,Peptostreptococcaceae,Paeniclostridium,10,8.171425,7,0.272201,0.329855,5.404891,0.000259,0.000259,4,0.005849,0,0.911111,41,0.035904
+254,Parvimonas,,22.8,Taxa,Peptoniphilaceae,Parvimonas,4,2.139825,7,0.271154,0.315079,180.046032,0.000198,0.000198,3,0.003749,0,0.333333,2,0.012504
+11,pbp4,,720.16,ARG,Beta-lactam,pbp4,15,12.341612,5,0.380054,0.446099,133.902867,0.021198,0.021198,8,0.006849,0,0.819048,86,0.166679
+282,Pelosinus,,28.92,Taxa,Sporomusaceae,Pelosinus,3,1.877265,8,0.200284,0.232033,0,0.000003,0.000003,3,0.00364,0,1,3,0.004488
+251,Peptococcaceae_u_g,,19.83,Taxa,Peptococcaceae,Peptococcaceae_u_g,4,2.491468,6,0.294979,0.338416,285.14803,0.00722,0.00722,2,0.003061,0,0.333333,2,0.034389
+258,Peptostreptococcus,,3.81,Taxa,Peptostreptococcaceae,Peptostreptococcus,14,7.910317,6,0.320455,0.386288,561.494584,0.010491,0.010491,8,0.007183,0,0.527473,48,0.107494
+91,Plasmid 38606113,,1100.17,MGE,Plasmid,Plasmid 38606113,22,17.973585,6,0.378016,0.473522,97.998729,0.15676,0.15676,6,0.007466,0,0.809524,187,0.648989
+24,pmrA,,1084.7,ARG,Polymyxin,pmrA,21,14.702733,6,0.328671,0.430378,291.501212,0.124962,0.124962,0,0.008202,0,0.67619,142,0.50865
+25,pmrB,,658.1,ARG,Polymyxin,pmrB,19,16.605073,6,0.322654,0.420331,1.847108,0.143456,0.143456,0,0.006405,0,0.97076,166,0.578354
+28,pmrF,,535.55,ARG,Polymyxin,pmrF,9,7.203529,6,0.311947,0.371158,60.976881,0.008262,0.008262,2,0.005182,0,0.805556,29,0.056397
+262,Porphyromonas,,379.59,Taxa,Porphyromonadaceae,Porphyromonas,5,3.114486,6,0.282,0.316548,276.940337,0.000391,0.000391,3,0.004843,0,0.3,3,0.010604
+265,Propionibacteriaceae_u_g,,8.54,Taxa,Propionibacteriaceae,Propionibacteriaceae_u_g,9,7.203529,6,0.311947,0.371158,60.976881,0.008262,0.008262,2,0.005182,0,0.805556,29,0.056397
+231,Pseudobutyrivibrio,,173.28,Taxa,Lachnospiraceae,Pseudobutyrivibrio,6,3.706033,7,0.242685,0.2872,248.145939,0.000025,0.000025,3,0.006581,0,0.4,6,0.008057
+291,Pseudoxanthomonas,,5.5,Taxa,Xanthomonadaceae,Pseudoxanthomonas,13,7.108178,5,0.330986,0.389243,923.854854,0.009139,0.009139,8,0.007685,0,0.487179,38,0.097301
+271,Rickettsiales_u_g,,3.53,Taxa,Rickettsiales_u_f,Rickettsiales_u_g,5,3.215301,7,0.267045,0.316059,64.573117,0.004962,0.004962,2,0.003893,0,0.4,4,0.025954
+232,Roseburia,,14.9,Taxa,Lachnospiraceae,Roseburia,4,2.378794,7,0.25777,0.311685,151.348085,0.007829,0.007829,2,0.004142,0,0.333333,2,0.03472
+267,Saccharomonospora,,965.46,Taxa,Pseudonocardiaceae,Saccharomonospora,10,6.753263,6,0.299363,0.361466,176.170059,0.000677,0.000677,4,0.005772,0,0.644444,29,0.039523
+268,Saccharopolyspora,,414.4,Taxa,Pseudonocardiaceae,Saccharopolyspora,12,7.968844,7,0.288344,0.357633,139.472035,0.000515,0.000515,4,0.006733,0,0.666667,44,0.048573
+157,Salmonella phage RE-2010,,52.59,Phage,Myoviridae,Salmonella phage RE-2010,34,24.515739,6,0.381081,0.505437,407.132822,0.245997,0.245997,0,0.01081,0,0.541889,304,1
+163,Salmonella virus HK620,,17.61,Phage,Podoviridae,Salmonella virus HK620,29,21.10261,6,0.379032,0.490662,250.969492,0.210981,0.210981,6,0.009427,0,0.586207,238,0.861395
+159,Salmonella virus SJ46,,256.79,Phage,Myoviridae,Salmonella virus SJ46,19,16.59697,6,0.322654,0.420331,1.847108,0.143456,0.143456,0,0.006405,0,0.97076,166,0.578354
+153,Seunavirus_u_s,,1.32,Phage,Myoviridae,Seunavirus_u_s,15,12.341612,5,0.380054,0.446099,133.902867,0.021198,0.021198,8,0.006849,0,0.819048,86,0.166679
+211,Shigella,,67.71,Taxa,Enterobacteriaceae,Shigella,22,18.527098,6,0.330211,0.436643,47.309078,0.162312,0.162312,0,0.007438,0,0.809524,187,0.655599
+165,Shigella phage SfII,,5.06,Phage,Myoviridae,Shigella phage SfII,22,17.973585,6,0.378016,0.473522,97.998729,0.15676,0.15676,6,0.007466,0,0.809524,187,0.648989
+166,Shigella phage SfIV,,29.91,Phage,Myoviridae,Shigella phage SfIV,21,14.873332,6,0.332547,0.432388,348.234935,0.125053,0.125053,0,0.008138,0,0.680952,143,0.508485
+168,Shigella virus Sf6,,101.9,Phage,Podoviridae,Shigella virus Sf6,20,17.535954,6,0.327146,0.427778,5.412032,0.152729,0.152729,0,0.006684,0,0.926316,176,0.615833
+207,Slackia,,6.36,Taxa,Eggerthellaceae,Slackia,15,12.341612,5,0.380054,0.446099,133.902867,0.021198,0.021198,8,0.006849,0,0.819048,86,0.166679
+281,Sporolactobacillus,,1.57,Taxa,Sporolactobacillaceae,Sporolactobacillus,22,17.973585,6,0.378016,0.473522,97.998729,0.15676,0.15676,6,0.007466,0,0.809524,187,0.648989
+283,Staphylococcus,,11.19,Taxa,Staphylococcaceae,Staphylococcus,9,7.087258,6,0.311947,0.371158,60.976881,0.008262,0.008262,2,0.005182,0,0.805556,29,0.056397
+170,Stx2-converting phage 1717,,215.56,Phage,Siphoviridae,Stx2-converting phage 1717,22,17.021439,6,0.344743,0.442199,30.178392,0.166182,0.166182,6,0.007282,0,0.796537,184,0.678001
+171,Stx2-converting phage 86,,3.28,Phage,Podoviridae,Stx2-converting phage 86,19,16.605073,6,0.322654,0.420331,1.847108,0.143456,0.143456,0,0.006405,0,0.97076,166,0.578354
+284,Succinatimonas,,14.54,Taxa,Succinivibrionaceae,Succinatimonas,21,16.309165,6,0.34901,0.444563,23.418444,0.15407,0.15407,6,0.007114,0,0.861905,181,0.630817
+285,Succinivibrio,,122.38,Taxa,Succinivibrionaceae,Succinivibrio,10,6.81029,7,0.272201,0.329855,5.404891,0.000259,0.000259,4,0.005849,0,0.911111,41,0.035904
+87,sugE,,3956.26,ARG,MDR,sugE,3,1.951477,8,0.2,0.230184,0,0.000002,0.000002,3,0.003716,0,1,3,0.00427
+62,tetBP,,1259.55,ARG,Tetracycline,tetBP,12,8.01125,7,0.288934,0.355978,81.047827,0.00216,0.00216,7,0.006611,0,0.621212,41,0.07503
+78,tetL-Ef,,4524.1,ARG,Tetracycline,tetL-Ef,3,2.033157,7,0.228896,0.258646,12.044541,0.000023,0.000023,3,0.003612,0,0.666667,2,0.004341
+64,tetQ,,227806.23,ARG,Tetracycline,tetQ,10,5.640565,6,0.318284,0.37565,407.636415,0.001129,0.001129,7,0.006837,0,0.311111,14,0.04007
+287,Thermoactinomyces,,3502.81,Taxa,Thermoactinomycetaceae,Thermoactinomyces,17,12.744243,6,0.34901,0.427541,192.976015,0.005722,0.005722,7,0.008643,0,0.588235,80,0.120562
+288,Thermoanaerobacterales_u_g,,60.82,Taxa,Thermoanaerobacterales_u_f,Thermoanaerobacterales_u_g,8,5.454741,6,0.294363,0.343144,168.452819,0.000148,0.000148,3,0.007183,0,0.464286,13,0.016644
+246,Thermobifida,,1217.13,Taxa,Nocardiopsaceae,Thermobifida,15,10.292646,6,0.321918,0.396809,191.940535,0.003211,0.003211,7,0.007527,0,0.542857,57,0.098641
+177,Thermobispora,,16.06,Taxa,Actinobacteria_u_f,Thermobispora,15,11.710931,6,0.341404,0.415721,77.776622,0.005596,0.005596,7,0.007374,0,0.752381,79,0.11672
+95,tnp,,3485.82,MGE,Transposon,tnp,15,12.341612,5,0.380054,0.446099,133.902867,0.021198,0.021198,8,0.006849,0,0.819048,86,0.166679
+30,tolC,,1645.81,ARG,MDR,tolC,10,6.249239,6,0.284848,0.339125,270.262937,0.004315,0.004315,2,0.006198,0,0.422222,19,0.036056
+72,transposon 46242809,,2927.8,MGE,Transposon,transposon 46242809,10,7.148337,6,0.293139,0.347281,100.6639,0.000807,0.000807,4,0.005887,0,0.777778,35,0.036403
+73,transposon 46242811,,4452.61,MGE,Transposon,transposon 46242811,1,0.654609,8,0.193151,0.211229,0,0.000003,0.000003,3,0.001853,0,0,0,0.001432
+280,Treponema,,125.64,Taxa,Spirochaetaceae,Treponema,1,0.534139,8,0.20524,0.231349,0,0.00036,0.00036,2,0.001782,0,0,0,0.002301
+214,Turicibacter,,297.12,Taxa,Erysipelotrichaceae,Turicibacter,11,8.408093,6,0.303226,0.356738,39.608685,0.009755,0.009755,8,0.005334,0,0.818182,45,0.098497
+234,Tyzzerella,,21.95,Taxa,Lachnospiraceae,Tyzzerella,20,14.571459,5,0.365285,0.450118,506.892358,0.130239,0.130239,6,0.00762,0,0.752632,143,0.53643
+243,Ureaplasma,,3.66,Taxa,Mycoplasmataceae,Ureaplasma,11,7.513177,6,0.303879,0.358865,249.527082,0.00084,0.00084,4,0.006591,0,0.581818,32,0.037083
+261,Ureibacillus,,64.83,Taxa,Planococcaceae,Ureibacillus,13,8.52143,6,0.313333,0.383924,160.509589,0.002624,0.002624,7,0.006683,0,0.692308,54,0.089904
+293,Yersinia,,1.77,Taxa,Yersiniaceae,Yersinia,6,4.337735,8,0.219626,0.265181,44.848566,0.000006,0.000006,3,0.006629,0,0.533333,8,0.007876
+2,a 2394 Branch,,0,ARG,Aminoglycoside,a 2394 Branch,0,0,0,0,0,0,0,0,9,0.000902,2,0,0,0
+3,ant6 Ib,,0,ARG,Aminoglycoside,ant6 Ib,0,0,0,0,0,0,0,0,10,0.000902,3,0,0,0
+4,bacA,,0,ARG,Bacitracin,bacA,0,0,0,0,0,0,0,0,11,0.000902,4,0,0,0
+7,cfxA2,,0,ARG,Beta-lactam,cfxA2,0,0,0,0,0,0,0,0,12,0.000902,5,0,0,0
+8,cfxA3,,0,ARG,Beta-lactam,cfxA3,0,0,0,0,0,0,0,0,13,0.000902,6,0,0,0
+10,pbp2,,0,ARG,Beta-lactam,pbp2,0,0,0,0,0,0,0,0,14,0.000902,7,0,0,0
+12,bla 1029 Branch,,0,ARG,Beta-lactam,bla 1029 Branch,0,0,0,0,0,0,0,0,15,0.000902,8,0,0,0
+13,bla 1030 Branch,,0,ARG,Beta-lactam,bla 1030 Branch,0,0,0,0,0,0,0,0,16,0.000902,9,0,0,0
+15,blaAmpC,,0,ARG,Beta-lactam,blaAmpC,0,0,0,0,0,0,0,0,17,0.000902,10,0,0,0
+16,blaAmpH,,0,ARG,Beta-lactam,blaAmpH,0,0,0,0,0,0,0,0,18,0.000902,11,0,0,0
+17,blaCMY 111,,0,ARG,Beta-lactam,blaCMY 111,0,0,0,0,0,0,0,0,19,0.000902,12,0,0,0
+19,blaCMY 32,,0,ARG,Beta-lactam,blaCMY 32,0,0,0,0,0,0,0,0,20,0.000902,13,0,0,0
+20,baeR,,0,ARG,MDR,baeR,0,0,0,0,0,0,0,0,21,0.000902,14,0,0,0
+22,H NS,,0,ARG,MDR,H NS,0,0,0,0,0,0,0,0,22,0.000902,15,0,0,0
+23,acrF,,0,ARG,MDR,acrF,0,0,0,0,0,0,0,0,23,0.000902,16,0,0,0
+26,pmrC,,0,ARG,Polymyxin,pmrC,0,0,0,0,0,0,0,0,24,0.000902,17,0,0,0
+27,pmrE,,0,ARG,Polymyxin,pmrE,0,0,0,0,0,0,0,0,25,0.000902,18,0,0,0
+29,ermC,,0,ARG,Macrolide,ermC,0,0,0,0,0,0,0,0,26,0.000902,19,0,0,0
+31,acrD,,0,ARG,MDR,acrD,0,0,0,0,0,0,0,0,27,0.000902,20,0,0,0
+33,mdtA,,0,ARG,MDR,mdtA,0,0,0,0,0,0,0,0,28,0.000902,21,0,0,0
+34,mdtB,,0,ARG,MDR,mdtB,0,0,0,0,0,0,0,0,29,0.000902,22,0,0,0
+35,mdtC,,0,ARG,MDR,mdtC,0,0,0,0,0,0,0,0,30,0.000902,23,0,0,0
+36,mdtD,,0,ARG,MDR,mdtD,0,0,0,0,0,0,0,0,31,0.000902,24,0,0,0
+37,mdtE,,0,ARG,MDR,mdtE,0,0,0,0,0,0,0,0,32,0.000902,25,0,0,0
+38,mdtG,,0,ARG,MDR,mdtG,0,0,0,0,0,0,0,0,33,0.000902,26,0,0,0
+39,mdtN,,0,ARG,MDR,mdtN,0,0,0,0,0,0,0,0,34,0.000902,27,0,0,0
+43,mdtL,,0,ARG,MDR,mdtL,0,0,0,0,0,0,0,0,35,0.000902,28,0,0,0
+44,mdtM,,0,ARG,MDR,mdtM,0,0,0,0,0,0,0,0,36,0.000902,29,0,0,0
+45,gadX,,0,ARG,MDR,gadX,0,0,0,0,0,0,0,0,37,0.000902,30,0,0,0
+46,mdfA,,0,ARG,MDR,mdfA,0,0,0,0,0,0,0,0,38,0.000902,31,0,0,0
+47,emrE,,0,ARG,MDR,emrE,0,0,0,0,0,0,0,0,39,0.000902,32,0,0,0
+48,emrY,,0,ARG,MDR,emrY,0,0,0,0,0,0,0,0,40,0.000902,33,0,0,0
+49,mdtK,,0,ARG,MDR,mdtK,0,0,0,0,0,0,0,0,41,0.000902,34,0,0,0
+51,emrA,,0,ARG,MDR,emrA,0,0,0,0,0,0,0,0,42,0.000902,35,0,0,0
+52,emrK,,0,ARG,Tetracycline,emrK,0,0,0,0,0,0,0,0,43,0.000902,36,0,0,0
+53,arnA,,0,ARG,Polymyxin,arnA,0,0,0,0,0,0,0,0,44,0.000902,37,0,0,0
+54,cpxR,,0,ARG,MDR,cpxR,0,0,0,0,0,0,0,0,45,0.000902,38,0,0,0
+56,acrS,,0,ARG,MDR,acrS,0,0,0,0,0,0,0,0,46,0.000902,39,0,0,0
+57,phoP,,0,ARG,MDR,phoP,0,0,0,0,0,0,0,0,47,0.000902,40,0,0,0
+60,evgS,,0,ARG,MDR,evgS,0,0,0,0,0,0,0,0,48,0.000902,41,0,0,0
+61,phoQ,,0,ARG,MDR,phoQ,0,0,0,0,0,0,0,0,49,0.000902,42,0,0,0
+63,tetL,,0,ARG,Tetracycline,tetL,0,0,0,0,0,0,0,0,50,0.000902,43,0,0,0
+66,mdtF,,0,ARG,MDR,mdtF,0,0,0,0,0,0,0,0,51,0.000902,44,0,0,0
+67,88 Branch,,0,Virulence,Unknown,88 Branch,0,0,0,0,0,0,0,0,52,0.000902,45,0,0,0
+69,rteC,,0,Virulence,Two-component system response regulator,rteC,0,0,0,0,0,0,0,0,53,0.000902,46,0,0,0
+70,traE,,0,MGE,Plasmid,traE,0,0,0,0,0,0,0,0,54,0.000902,47,0,0,0
+71,traF,,0,MGE,Plasmid,traF,0,0,0,0,0,0,0,0,55,0.000902,48,0,0,0
+75,colA,,0,Virulence,Collagenase,colA,0,0,0,0,0,0,0,0,56,0.000902,49,0,0,0
+76,pfoA,,0,Virulence,Citolysis,pfoA,0,0,0,0,0,0,0,0,57,0.000902,50,0,0,0
+77,repB,,0,MGE,Plasmid,repB,0,0,0,0,0,0,0,0,58,0.000902,51,0,0,0
+79,aadE,,0,ARG,Aminoglycoside,aadE,0,0,0,0,0,0,0,0,59,0.000902,52,0,0,0
+80,Transposon 807609,,0,MGE,Transposon,Transposon 807609,0,0,0,0,0,0,0,0,60,0.000902,53,0,0,0
+84,lacY,,0,Virulence,Beta-galactosides,lacY,0,0,0,0,0,0,0,0,61,0.000902,54,0,0,0
+85,lpfA,,0,Virulence,Fimbrial major protein,lpfA,0,0,0,0,0,0,0,0,62,0.000902,55,0,0,0
+86,ompA,,0,Virulence,Peptidoglycan,ompA,0,0,0,0,0,0,0,0,63,0.000902,56,0,0,0
+88,traA,,0,MGE,Plasmid,traA,0,0,0,0,0,0,0,0,64,0.000902,57,0,0,0
+89,yddA,,0,Virulence,Inner membrane ABC transporter,yddA,0,0,0,0,0,0,0,0,65,0.000902,58,0,0,0
+92,exc1,,0,MGE,Plasmid,exc1,0,0,0,0,0,0,0,0,66,0.000902,59,0,0,0
+93,Rom,,0,MGE,Plasmid,Rom,0,0,0,0,0,0,0,0,67,0.000902,60,0,0,0
+94,Plasmid 4775492,,0,MGE,Plasmid,Plasmid 4775492,0,0,0,0,0,0,0,0,68,0.000902,61,0,0,0
+98,tetA,,0,ARG,Tetracycline,tetA,0,0,0,0,0,0,0,0,69,0.000902,62,0,0,0
+99,fyuA,,0,Virulence,Biofilm,fyuA,0,0,0,0,0,0,0,0,70,0.000902,63,0,0,0
+100,ybtP,,0,Virulence,Siderophore,ybtP,0,0,0,0,0,0,0,0,71,0.000902,64,0,0,0
+101,Cronobacter phage vB_CsaP_GAP52,,9.76,Phage,Podoviridae,Cronobacter phage vB_CsaP_GAP52,0,0,0,0,0,0,0,0,72,0.000902,65,0,0,0
+102,Karamvirus_u_s,,0,Phage,Myoviridae,Karamvirus_u_s,0,0,0,0,0,0,0,0,73,0.000902,66,0,0,0
+103,Escherichia virus CC31,,0,Phage,Myoviridae,Escherichia virus CC31,0,0,0,0,0,0,0,0,74,0.000902,67,0,0,0
+105,Escherichia virus HK106,,0,Phage,Siphoviridae,Escherichia virus HK106,0,0,0,0,0,0,0,0,75,0.000902,68,0,0,0
+107,Escherichia virus HK544,,0,Phage,Siphoviridae,Escherichia virus HK544,0,0,0,0,0,0,0,0,76,0.000902,69,0,0,0
+108,Escherichia virus HK629,,0,Phage,Siphoviridae,Escherichia virus HK629,0,0,0,0,0,0,0,0,77,0.000902,70,0,0,0
+109,Escherichia virus HK633,,0,Phage,Siphoviridae,Escherichia virus HK633,0,0,0,0,0,0,0,0,78,0.000902,71,0,0,0
+116,Enterobacteria phage VT2phi_272,,0,Phage,Podoviridae,Enterobacteria phage VT2phi_272,0,0,0,0,0,0,0,0,79,0.000902,72,0,0,0
+120,Enterobacteria phage mEp043 c-1,,0,Phage,Siphoviridae,Enterobacteria phage mEp043 c-1,0,0,0,0,0,0,0,0,80,0.000902,73,0,0,0
+121,Enterobacteria phage mEp235,,0,Phage,Siphoviridae,Enterobacteria phage mEp235,0,0,0,0,0,0,0,0,81,0.000902,74,0,0,0
+122,Enterobacteria phage mEp237,,0,Phage,Siphoviridae,Enterobacteria phage mEp237,0,0,0,0,0,0,0,0,82,0.000902,75,0,0,0
+124,Escherichia virus mEpX1,,0,Phage,Siphoviridae,Escherichia virus mEpX1,0,0,0,0,0,0,0,0,83,0.000902,76,0,0,0
+125,Escherichia virus mEpX2,,0,Phage,Siphoviridae,Escherichia virus mEpX2,0,0,0,0,0,0,0,0,84,0.000902,77,0,0,0
+126,Enterobacteria phage vB_EcoP_ACG-C91,,0,Phage,Autographiviridae,Enterobacteria phage vB_EcoP_ACG-C91,0,0,0,0,0,0,0,0,85,0.000902,78,0,0,0
+127,Enterobacterial phage mEp213,,0,Phage,Siphoviridae,Enterobacterial phage mEp213,0,0,0,0,0,0,0,0,86,0.000902,79,0,0,0
+128,Vequintavirus_u_s,,0,Phage,Myoviridae,Vequintavirus_u_s,0,0,0,0,0,0,0,0,87,0.000902,80,0,0,0
+129,Escherichia virus Cajan,,0,Phage,Siphoviridae,Escherichia virus Cajan,0,0,0,0,0,0,0,0,88,0.000902,81,0,0,0
+131,Escherichia virus FFH2,,0,Phage,Myoviridae,Escherichia virus FFH2,0,0,0,0,0,0,0,0,89,0.000902,82,0,0,0
+132,Escherichia virus Min27,,0,Phage,Podoviridae,Escherichia virus Min27,0,0,0,0,0,0,0,0,90,0.000902,83,0,0,0
+133,Escherichia virus Seurat,,0,Phage,Siphoviridae,Escherichia virus Seurat,0,0,0,0,0,0,0,0,91,0.000902,84,0,0,0
+138,Escherichia phage slur01,,0,Phage,Siphoviridae,Escherichia phage slur01,0,0,0,0,0,0,0,0,92,0.000902,85,0,0,0
+139,Escherichia virus 24B,,0,Phage,Podoviridae,Escherichia virus 24B,0,0,0,0,0,0,0,0,93,0.000902,86,0,0,0
+140,Escherichia virus 186,,0,Phage,Myoviridae,Escherichia virus 186,0,0,0,0,0,0,0,0,94,0.000902,87,0,0,0
+141,Escherichia virus HK022,,0,Phage,Siphoviridae,Escherichia virus HK022,0,0,0,0,0,0,0,0,95,0.000902,88,0,0,0
+142,Escherichia virus HK97,,0,Phage,Siphoviridae,Escherichia virus HK97,0,0,0,0,0,0,0,0,96,0.000902,89,0,0,0
+143,Escherichia virus K1-5,,0,Phage,Autographiviridae,Escherichia virus K1-5,0,0,0,0,0,0,0,0,97,0.000902,90,0,0,0
+144,Escherichia virus K1E,,0,Phage,Autographiviridae,Escherichia virus K1E,0,0,0,0,0,0,0,0,98,0.000902,91,0,0,0
+147,Lactobacillus phage LfeSau,,0,Phage,Siphoviridae,Lactobacillus phage LfeSau,0,0,0,0,0,0,0,0,99,0.000902,92,0,0,0
+148,Lactobacillus phage Lrm1,,0,Phage,Siphoviridae,Lactobacillus phage Lrm1,0,0,0,0,0,0,0,0,100,0.000902,93,0,0,0
+149,Lactobacillus phage iA2,,0,Phage,Siphoviridae,Lactobacillus phage iA2,0,0,0,0,0,0,0,0,101,0.000902,94,0,0,0
+151,Lactococcus phage Tuc2009,,0,Phage,Siphoviridae,Lactococcus phage Tuc2009,0,0,0,0,0,0,0,0,102,0.000902,95,0,0,0
+152,Mycobacterium phage Enkosi,,0,Phage,Siphoviridae,Mycobacterium phage Enkosi,0,0,0,0,0,0,0,0,103,0.000902,96,0,0,0
+154,Salmonella phage BP12B,,0,Phage,Autographiviridae,Salmonella phage BP12B,0,0,0,0,0,0,0,0,104,0.000902,97,0,0,0
+155,Salmonella virus FSLSP004,,0,Phage,Myoviridae,Salmonella virus FSLSP004,0,0,0,0,0,0,0,0,105,0.000902,98,0,0,0
+156,Salmonella virus SP31,,0,Phage,Siphoviridae,Salmonella virus SP31,0,0,0,0,0,0,0,0,106,0.000902,99,0,0,0
+158,Salmonella phage SEN1,,0,Phage,Myoviridae,Salmonella phage SEN1,0,0,0,0,0,0,0,0,107,0.000902,100,0,0,0
+160,Salmonella virus SPN3US,,0,Phage,Myoviridae,Salmonella virus SPN3US,0,0,0,0,0,0,0,0,108,0.000902,101,0,0,0
+161,Salmonella phage g341c,,0,Phage,Podoviridae,Salmonella phage g341c,0,0,0,0,0,0,0,0,109,0.000902,102,0,0,0
+162,Salmonella phage vB_SemP_Emek,,0,Phage,Podoviridae,Salmonella phage vB_SemP_Emek,0,0,0,0,0,0,0,0,110,0.000902,103,0,0,0
+164,Salmonella virus PsP3,,0,Phage,Myoviridae,Salmonella virus PsP3,0,0,0,0,0,0,0,0,111,0.000902,104,0,0,0
+167,Shigella virus SfMu,,0,Phage,Myoviridae,Shigella virus SfMu,0,0,0,0,0,0,0,0,112,0.000902,105,0,0,0
+169,Streptococcus phage 20617,,0,Phage,Siphoviridae,Streptococcus phage 20617,0,0,0,0,0,0,0,0,113,0.000902,106,0,0,0
+172,Punavirus_u_s,,0,Phage,Myoviridae,Punavirus_u_s,0,0,0,0,0,0,0,0,114,0.000902,107,0,0,0
+174,Succiniclasticum,,0,Taxa,Acidaminococcaceae,Succiniclasticum,0,0,0,0,0,0,0,0,115,0.000902,108,0,0,0
+178,Taylorella,,0,Taxa,Alcaligenaceae,Taylorella,0,0,0,0,0,0,0,0,116,0.000902,109,0,0,0
+185,Gemella,,0,Taxa,Bacillales_u_f,Gemella,0,0,0,0,0,0,0,0,117,0.000902,110,0,0,0
+188,Ochrobactrum,,0,Taxa,Brucellaceae,Ochrobactrum,0,0,0,0,0,0,0,0,118,0.000902,111,0,0,0
+189,Campylobacter,,0,Taxa,Campylobacteraceae,Campylobacter,0,0,0,0,0,0,0,0,119,0.000902,112,0,0,0
+190,Candidatus Paracaedibacteraceae_u_g,,0,Taxa,Candidatus Paracaedibacteraceae,Candidatus Paracaedibacteraceae_u_g,0,0,0,0,0,0,0,0,120,0.000902,113,0,0,0
+191,Cardiobacterium,,0,Taxa,Cardiobacteriaceae,Cardiobacterium,0,0,0,0,0,0,0,0,121,0.000902,114,0,0,0
+198,Thermaerobacter,,17.53,Taxa,Clostridiales Family XVII. Incertae Sedis,Thermaerobacter,0,0,0,0,0,0,0,0,122,0.000902,115,0,0,0
+202,Runella,,0,Taxa,Cytophagaceae,Runella,0,0,0,0,0,0,0,0,123,0.000902,116,0,0,0
+206,Hippea,,0,Taxa,Desulfurellaceae,Hippea,0,0,0,0,0,0,0,0,124,0.000902,117,0,0,0
+209,Leclercia,,0,Taxa,Enterobacteriaceae,Leclercia,0,0,0,0,0,0,0,0,125,0.000902,118,0,0,0
+210,Salmonella,,0,Taxa,Enterobacteriaceae,Salmonella,0,0,0,0,0,0,0,0,126,0.000902,119,0,0,0
+213,Kandleria,,0,Taxa,Erysipelotrichaceae,Kandleria,0,0,0,0,0,0,0,0,127,0.000902,120,0,0,0
+215,Ferrimonas,,0,Taxa,Ferrimonadaceae,Ferrimonas,0,0,0,0,0,0,0,0,128,0.000902,121,0,0,0
+218,Flavobacteriales_u_g,,0,Taxa,Flavobacteriales_u_f,Flavobacteriales_u_g,0,0,0,0,0,0,0,0,129,0.000902,122,0,0,0
+220,Glycomyces,,0,Taxa,Glycomycetaceae,Glycomyces,0,0,0,0,0,0,0,0,130,0.000902,123,0,0,0
+223,Holophagaceae_u_g,,0,Taxa,Holophagaceae,Holophagaceae_u_g,0,0,0,0,0,0,0,0,131,0.000902,124,0,0,0
+225,Hungateiclostridiaceae_u_g,,0,Taxa,Hungateiclostridiaceae,Hungateiclostridiaceae_u_g,0,0,0,0,0,0,0,0,132,0.000902,125,0,0,0
+226,Coprococcus,,0,Taxa,Lachnospiraceae,Coprococcus,0,0,0,0,0,0,0,0,133,0.000902,126,0,0,0
+228,Lachnobacterium,,0,Taxa,Lachnospiraceae,Lachnobacterium,0,0,0,0,0,0,0,0,134,0.000902,127,0,0,0
+233,Shuttleworthia,,0,Taxa,Lachnospiraceae,Shuttleworthia,0,0,0,0,0,0,0,0,135,0.000902,128,0,0,0
+238,Clavibacter,,0,Taxa,Microbacteriaceae,Clavibacter,0,0,0,0,0,0,0,0,136,0.000902,129,0,0,0
+245,Nitrospiraceae_u_g,,0,Taxa,Nitrospiraceae,Nitrospiraceae_u_g,0,0,0,0,0,0,0,0,137,0.000902,130,0,0,0
+247,Opitutales_u_g,,0,Taxa,Opitutales_u_f,Opitutales_u_g,0,0,0,0,0,0,0,0,138,0.000902,131,0,0,0
+248,Saccharibacillus,,0,Taxa,Paenibacillaceae,Saccharibacillus,0,0,0,0,0,0,0,0,139,0.000902,132,0,0,0
+249,Gallibacterium,,0,Taxa,Pasteurellaceae,Gallibacterium,0,0,0,0,0,0,0,0,140,0.000902,133,0,0,0
+255,Intestinibacter,,0,Taxa,Peptostreptococcaceae,Intestinibacter,0,0,0,0,0,0,0,0,141,0.000902,134,0,0,0
+257,Peptostreptococcaceae_u_g,,198.88,Taxa,Peptostreptococcaceae,Peptostreptococcaceae_u_g,0,0,0,0,0,0,0,0,142,0.000902,135,0,0,0
+259,Aminobacter,,0,Taxa,Phyllobacteriaceae,Aminobacter,0,0,0,0,0,0,0,0,143,0.000902,136,0,0,0
+260,Phyllobacteriaceae_u_g,,0,Taxa,Phyllobacteriaceae,Phyllobacteriaceae_u_g,0,0,0,0,0,0,0,0,144,0.000902,137,0,0,0
+266,Pseudonocardia,,0,Taxa,Pseudonocardiaceae,Pseudonocardia,0,0,0,0,0,0,0,0,145,0.000902,138,0,0,0
+269,Halocynthiibacter,,0,Taxa,Rhodobacteraceae,Halocynthiibacter,0,0,0,0,0,0,0,0,146,0.000902,139,0,0,0
+270,Thalassospira,,0,Taxa,Rhodospirillaceae,Thalassospira,0,0,0,0,0,0,0,0,147,0.000902,140,0,0,0
+272,Rikenellaceae_u_g,,0,Taxa,Rikenellaceae,Rikenellaceae_u_g,0,0,0,0,0,0,0,0,148,0.000902,141,0,0,0
+273,Anaerotruncus,,0,Taxa,Ruminococcaceae,Anaerotruncus,0,0,0,0,0,0,0,0,149,0.000902,142,0,0,0
+274,Ethanoligenens,,0,Taxa,Ruminococcaceae,Ethanoligenens,0,0,0,0,0,0,0,0,150,0.000902,143,0,0,0
+276,Selenomonadaceae_u_g,,0,Taxa,Selenomonadaceae,Selenomonadaceae_u_g,0,0,0,0,0,0,0,0,151,0.000902,144,0,0,0
+277,Shewanella,,0,Taxa,Shewanellaceae,Shewanella,0,0,0,0,0,0,0,0,152,0.000902,145,0,0,0
+278,Sphaerobacteraceae_u_g,,0,Taxa,Sphaerobacteraceae,Sphaerobacteraceae_u_g,0,0,0,0,0,0,0,0,153,0.000902,146,0,0,0
+279,Sphingobacteriaceae_u_g,,0,Taxa,Sphingobacteriaceae,Sphingobacteriaceae_u_g,0,0,0,0,0,0,0,0,154,0.000902,147,0,0,0
+286,Laceyella,,0,Taxa,Thermoactinomycetaceae,Laceyella,0,0,0,0,0,0,0,0,155,0.000902,148,0,0,0
+290,Veillonellaceae_u_g,,0,Taxa,Veillonellaceae,Veillonellaceae_u_g,0,0,0,0,0,0,0,0,156,0.000902,149,0,0,0
+292,Xylella,,0,Taxa,Xanthomonadaceae,Xylella,0,0,0,0,0,0,0,0,157,0.000902,150,0,0,0

@@ -1,0 +1,174 @@
+OTU_ID,Type,Class,Mechanism,Gene,Name
+OTU_39,MGE,Transposon,Transposon,807609,Enterococcus faecium GI 807609
+OTU_54,Virulence,Virulence,Outer membrane lipoprotein,3334641,Escherichia coli GI 3334641
+OTU_59,MGE,Plasmid,Plasmid,4775492,Klebsiella oxytoca GI 4775492
+OTU_33,MGE,Plasmid,Plasmid,8100665,Enterococcus faecalis GI 8100665
+OTU_37,MGE,Transposon,Transposon,21886745,Enterococcus faecium GI 21886745
+OTU_55,MGE,Plasmid,Plasmid,38606113,Escherichia coli GI 38606113
+OTU_66,MGE,Transposon,Transposon,46019645,Salmonella Typhimurium GI 46019645
+OTU_18,MGE,Transposon,Transposon,46242796,Bacteroides fragilis GI 46242796
+OTU_19,MGE,Transposon,Transposon,46242797,Bacteroides fragilis GI 46242797
+OTU_20,MGE,Transposon,Transposon,46242799,Bacteroides fragilis GI 46242799
+OTU_21,MGE,Transposon,Transposon,46242805,Bacteroides fragilis GI 46242805
+OTU_22,MGE,Transposon,Transposon,46242807,Bacteroides fragilis GI 46242807
+OTU_23,MGE,Transposon,Transposon,46242808,Bacteroides fragilis GI 46242808
+OTU_24,MGE,Transposon,Transposon,46242809,Bacteroides fragilis GI 46242809
+OTU_25,MGE,Transposon,Transposon,46242810,Bacteroides fragilis GI 46242810
+OTU_26,MGE,Transposon,Transposon,46242811,Bacteroides fragilis GI 46242811
+OTU_71,Virulence,Virulence,Unknown,52345264,Streptococcus pyogenes GI 52345264
+OTU_77,ARG,Aminoglycoside,Inactivation,2024 Branch,Aminoglycoside 2024 Branch
+OTU_86,ARG,Other,NS,2429 Branch,AR 272 645 2429 Branch
+OTU_38,Virulence,Virulence,Unknown,774 Branch,Enterococcus faecium GI 774 Branch
+OTU_1,Virulence,Virulence,Unknown,88 Branch,Bacillus 88 Branch
+OTU_78,ARG,Aminoglycoside,Inactivation,a 2394 Branch,Aminoglycoside a 2394 Branch
+OTU_79,ARG,Aminoglycoside,Inactivation,aac6 lm,Aminoglycoside aac6 Im
+OTU_80,ARG,Aminoglycoside,Inactivation,aadA9,Aminoglycoside aadA9
+OTU_81,ARG,Aminoglycoside,Inactivation,aadD,Aminoglycoside aadD
+OTU_34,ARG,Aminoglycoside,Inactivation,aadE,Enterococcus faecium GENE aadE
+OTU_123,ARG,MDR,Eflux pump,acrD,MDR-Efflux-pump acrD
+OTU_143,ARG,MDR,Eflux pump,acrE,Membrane-fusion-protein acrE
+OTU_106,ARG,MDR,Eflux pump,acrF,Inner-membrane-transporter acrF
+OTU_152,ARG,MDR,Eflux pump,acrS,Repressor-of-efflux-complex acrS
+OTU_82,ARG,Aminoglycoside,Inactivation,ant6 Ib,Aminoglycoside ant6 Ib
+OTU_83,ARG,Aminoglycoside,Inactivation,aph3 III,Aminoglycoside aph3 III
+OTU_84,ARG,Aminoglycoside,Inactivation,aph6 Id,Aminoglycoside aph6 Id
+OTU_148,ARG,Polymyxin,Target alteration,arnA,polymyxin-and-cationic-antimicrobial-peptides arnA
+OTU_40,Virulence,Virulence,N-succinyltransferase,astA,Escherichia coli GENE astA
+OTU_87,ARG,Bacitracin,Target alteration,bacA,Bacitracin-resistance bacA
+OTU_103,ARG,MDR,Eflux pump,baeR,Efflux-pump baeR
+OTU_154,ARG,MDR,Eflux pump,baeS,Sensor-kinase baeS
+OTU_76,ARG,Bacitracin,Eflux pump,bcrA,ABC-transporter-confers-bacitran-resistance bcrA
+OTU_95,ARG,Beta-lactam,Inactivation,bla 1029 Branch,Beta-lactam-resistance bla 13 863 1029 Branch
+OTU_96,ARG,Beta-lactam,Inactivation,bla 1030 Branch,Beta-lactam-resistance bla 23 868 1030 Branch
+OTU_97,ARG,Beta-lactam,Inactivation,blaACI 1,Beta-lactam-resistance blaACI 1
+OTU_98,ARG,Beta-lactam,Inactivation,blaAmpC,Beta-lactam-resistance blaAmpC
+OTU_99,ARG,Beta-lactam,Inactivation,blaAmpH,Beta-lactam-resistance blaAmpH
+OTU_100,ARG,Beta-lactam,Inactivation,blaCMY,Beta-lactam-resistance blaCMY 111
+OTU_101,ARG,Beta-lactam,Inactivation,blaCMY,Beta-lactam-resistance blaCMY 27
+OTU_102,ARG,Beta-lactam,Inactivation,blaCMY,Beta-lactam-resistance blaCMY 32
+OTU_41,Virulence,Virulence,Lipids,blc,Escherichia coli GENE blc
+OTU_2,Virulence,Virulence,Methyltransferase,bmhA,Bacteroides fragilis GENE bmhA
+OTU_124,ARG,MDR,Eflux pump,bmr,MDR-Efflux-pump bmr
+OTU_147,ARG,Phenicol,Inactivation,catB4,Phenicol catB4
+OTU_88,ARG,Beta-lactam,Inactivation,cfxA,Beta-lactam cfxA 2366 Branch
+OTU_89,ARG,Beta-lactam,Inactivation,cfxA,Beta-lactam cfxA 2367 Branch
+OTU_62,ARG,Beta-lactam,Inactivation,cfxA,Parabacteroides distasonis GI 32395281
+OTU_27,ARG,Beta-lactam,Inactivation,cfxA,Bacteroides vulgatus GI 33413459
+OTU_90,ARG,Beta-lactam,Inactivation,cfxA,Beta-lactam cfxA2
+OTU_91,ARG,Beta-lactam,Inactivation,cfxA,Beta-lactam cfxA3
+OTU_92,ARG,Beta-lactam,Inactivation,cfxA,Beta-lactam cfxA6
+OTU_112,ARG,Macrolide,Target alteration,clbC,Macrolide clbC
+OTU_42,ARG,Beta-lactam,Inactivation,blaCMY,Escherichia coli GENE cmy-13
+OTU_28,Virulence,Virulence,Collagenase,colA,Clostridium perfringens GENE colA
+OTU_155,ARG,MDR,Eflux pump,cpxA,Sensor-kinase cpxA
+OTU_149,ARG,MDR,Eflux pump,cpxR,Regulator cpxR
+OTU_150,ARG,MDR,Eflux pump,crp,Repressor-for-mdr-efflux-pump crp
+OTU_43,Virulence,Virulence,Unknown,e 971 Branch,Escherichia coli GENE e 971 Branch
+OTU_144,ARG,MDR,Eflux pump,emrA,Membrane-fusion-protein emrA
+OTU_172,ARG,MDR,Eflux pump,emrB,Translocase emrB
+OTU_140,ARG,MDR,Eflux pump,emrE,MDR-transporter emrE
+OTU_145,ARG,Tetracycline,Eflux pump,emrK,Membrane-fusion-protein emrK
+OTU_151,ARG,MDR,Eflux pump,emrR,Repressor-for-mdr-efflux-pump emrR
+OTU_141,ARG,MDR,Eflux pump,emrY,MDR-transporter emrY
+OTU_35,ARG,MLSB,Target alteration,ermB,Enterococcus faecium GENE ermB
+OTU_113,ARG,Macrolide,Target alteration,ermC,Macrolide ermC
+OTU_68,ARG,MLSB,Target alteration,ermC,Staphylococcus lentus GENE ermC
+OTU_114,ARG,Macrolide,Target alteration,ermG,Macrolide ermG
+OTU_115,ARG,Macrolide,Target alteration,ermQ,Macrolide ermQ
+OTU_104,ARG,MDR,Eflux pump,evgA,Efflux-pump evgA
+OTU_156,ARG,MDR,Eflux pump,evgS,Sensor-protein evgS
+OTU_3,Virulence,Virulence,DNA topoisomerase,exc,Bacteroides fragilis GENE exc
+OTU_57,MGE,Plasmid,Plasmid,exc1,Klebsiella oxytoca GENE exc1
+OTU_72,Virulence,Virulence,Biofilm,fyuA,Yersinia pestis GENE fyuA
+OTU_138,ARG,MDR,Eflux pump,gadX,MDR-regulator gadX
+OTU_105,ARG,MDR,Eflux pump,H NS,H NS
+OTU_4,MGE,Plasmid,Plasmid,int,Bacteroides fragilis GENE int
+OTU_5,MGE,Transposon,Transposon,IS942,Bacteroides fragilis GENE IS942
+OTU_44,MGE,Insertional sequence,Insertional sequence,iss,Escherichia coli GENE iss
+OTU_116,ARG,Macrolide,Inactivation,l 2009 Branch,Macrolide l 2009 Branch
+OTU_45,Virulence,Virulence,Beta-galactosides,lacY,Escherichia coli GENE lacY
+OTU_117,ARG,Macrolide,Inactivation,lnuC,Macrolide lnuC
+OTU_46,Virulence,Virulence,Fimbrial major protein,lpfA,Escherichia coli GENE lpfA
+OTU_118,ARG,Macrolide,NS,m 2021 Branch,Macrolide m 2021 Branch
+OTU_125,ARG,MDR,Eflux pump,marA,MDR-Efflux-pump marA
+OTU_139,ARG,MDR,Eflux pump,mdfA,MDR-translocase mdfA
+OTU_126,ARG,MDR,Eflux pump,mdtA,MDR-Efflux-pump mdtA
+OTU_127,ARG,MDR,Eflux pump,mdtB,MDR-Efflux-pump mdtB
+OTU_128,ARG,MDR,Eflux pump,mdtC,MDR-Efflux-pump mdtC
+OTU_129,ARG,MDR,Eflux pump,mdtD,MDR-Efflux-pump mdtD
+OTU_130,ARG,MDR,Eflux pump,mdtE,MDR-Efflux-pump mdtE
+OTU_173,ARG,MDR,Eflux pump,mdtF,Transporter-for-efflux-complex mdtF
+OTU_131,ARG,MDR,Eflux pump,mdtG,MDR-Efflux-pump mdtG
+OTU_135,ARG,MDR,Eflux pump,mdtH,MDR-protein mdtH
+OTU_142,ARG,MDR,Eflux pump,mdtK,MDR-transporter mdtK
+OTU_136,ARG,MDR,Eflux pump,mdtL,MDR-protein mdtL
+OTU_137,ARG,MDR,Eflux pump,mdtM,MDR-protein mdtM
+OTU_132,ARG,MDR,Eflux pump,mdtN,MDR-Efflux-pump mdtN
+OTU_133,ARG,MDR,Eflux pump,mdtO,MDR-Efflux-pump mdtO
+OTU_134,ARG,MDR,Eflux pump,mdtP,MDR-Efflux-pump mdtP
+OTU_119,ARG,Macrolide,Target protection,mefA,Macrolide mefA
+OTU_69,ARG,Macrolide,Target protection,mefA,Streptococcus pyogenes GENE mefA
+OTU_120,ARG,Macrolide,Target protection,mel,Macrolide mel
+OTU_63,MGE,Insertional sequence,Insertional sequence,mobA,Parabacteroides distasonis GI 32395282
+OTU_6,MGE,Insertional sequence,Insertional sequence,mobA,Bacteroides fragilis GENE mobA
+OTU_64,MGE,Insertional sequence,Insertional sequence,mobA,Pasteurella multocida GENE mobA
+OTU_7,MGE,Insertional sequence,Insertional sequence,mobB,Bacteroides fragilis GENE mobB
+OTU_30,MGE,Insertional sequence,Insertional sequence,mobB,Enterococcus faecalis GENE mobB
+OTU_8,MGE,Insertional sequence,Insertional sequence,mobC,Bacteroides fragilis GENE mobC
+OTU_121,ARG,Macrolide,Target protection,msrD,Macrolide msrD
+OTU_70,ARG,MLSB,Target protection,msrD,Streptococcus pyogenes GENE msrD
+OTU_146,ARG,Nitroimidazole,Inactivation,nimJ,Nitroimidazole nimJ
+OTU_47,Virulence,Virulence,Peptidoglycan,ompA,Escherichia coli GENE ompA
+OTU_93,ARG,Beta-lactam,Target alteration,pbp2,Beta-lactam pbp2 Ecoli
+OTU_94,ARG,Beta-lactam,Target alteration,pbp4,Beta-lactam pbp4 Ecoli
+OTU_29,Virulence,Virulence,Citolysis,pfoA,Clostridium perfringens GENE pfoA
+OTU_153,ARG,MDR,Eflux pump,phoP,Repressor-of-efflux-complex phoP
+OTU_157,ARG,MDR,Eflux pump,phoQ,Sensor-protein phoQ
+OTU_107,ARG,Polymyxin,Target alteration,pmrA,Involved-in-polymyxin-resistance pmrA
+OTU_108,ARG,Polymyxin,Target alteration,pmrB,Involved-in-polymyxin-resistance pmrB
+OTU_109,ARG,Polymyxin,Target alteration,pmrC,Involved-in-polymyxin-resistance pmrC
+OTU_110,ARG,Polymyxin,Target alteration,pmrE,Involved-in-polymyxin-resistance pmrE
+OTU_111,ARG,Polymyxin,Target alteration,pmrF,Involved-in-polymyxin-resistance pmrF
+OTU_48,ARG,Antiseptic-resistance protein,Eflux pump,qacEdelta1,Escherichia coli GENE qacEdelta1
+OTU_67,Virulence,Virulence,DNA repair,recF 12034665,Shigella flexneri GI 12034665
+OTU_31,MGE,Plasmid,Plasmid,repB,Enterococcus faecalis GENE repB
+OTU_9,Virulence,Virulence,DNA recombination,rhuM,Bacteroides fragilis GENE rhuM
+OTU_58,MGE,Plasmid,Plasmid,Rom,Klebsiella oxytoca GENE Rom
+OTU_10,Virulence,Virulence,Two-component system RR,rteA,Bacteroides fragilis GENE rteA
+OTU_11,Virulence,Virulence,Two-component system RR,rteB,Bacteroides fragilis GENE rteB
+OTU_12,Virulence,Virulence,Two-component system RR,rteC,Bacteroides fragilis GENE rteC
+OTU_85,ARG,Aminoglycoside,Inactivation,sat 2182 Branch,Aminoglycoside sat 2182 Branch
+OTU_36,ARG,Streptothricin,Inactivation,sat4,Enterococcus faecium GENE sat4
+OTU_49,MGE,Plasmid,Plasmid,stbA,Escherichia coli GENE stbA
+OTU_50,ARG,MDR,Eflux pump,sugE,Escherichia coli GENE sugE
+OTU_158,ARG,Tetracycline,NS,tet 2027 Branch,Tetracycline tet 2027 Branch
+OTU_159,ARG,Tetracycline,NS,tet 2105 Branch,Tetracycline tet 2105 Branch
+OTU_160,ARG,Tetracycline,Target protection,tet 32,Tetracycline tet 32
+OTU_161,ARG,Tetracycline,Eflux pump,tet32,Tetracycline tet32
+OTU_162,ARG,Tetracycline,Eflux pump,tet40,Tetracycline tet40
+OTU_163,ARG,Tetracycline,Target protection,tet44,Tetracycline tet44
+OTU_65,ARG,Tetracycline,Target protection,tetA,Salmonella Typhimurium GENE tetA
+OTU_164,ARG,Tetracycline,Eflux pump,tetAP,Tetracycline tetAP
+OTU_56,ARG,Tetracycline,Eflux pump,tetB,Haemophilus parasuis GENE tetB
+OTU_165,ARG,Tetracycline,Target protection,tetBP,Tetracycline tetBP
+OTU_166,ARG,Tetracycline,Eflux pump,tetD,Tetracycline tetD
+OTU_167,ARG,Tetracycline,Eflux pump,tetL,Tetracycline tetL
+OTU_32,ARG,Tetracycline,Eflux pump,tetL,Enterococcus faecalis GENE tetL
+OTU_168,ARG,Tetracycline,Target protection,tetO,Tetracycline tetO
+OTU_169,ARG,Tetracycline,Target protection,tetQ,Tetracycline tetQ
+OTU_13,ARG,Tetracycline,Target protection,tetQ,Bacteroides fragilis GENE tetQ
+OTU_170,ARG,Tetracycline,Target protection,tetW,Tetracycline tetW
+OTU_171,ARG,Tetracycline,Inactivation,tetX,Tetracycline tetX
+OTU_60,MGE,Transposon,Transposon,tnp,Klebsiella pneumoniae GENE tnp
+OTU_61,MGE,Transposon,Transposon,tnpA,Klebsiella pneumoniae GENE tnpA
+OTU_122,ARG,MDR,Eflux pump,tolC,MDR-Efflux-complex tolC
+OTU_51,MGE,Plasmid,Plasmid,traA,Escherichia coli GENE traA
+OTU_14,MGE,Plasmid,Plasmid,traE,Bacteroides fragilis GENE traE
+OTU_15,MGE,Plasmid,Plasmid,traF,Bacteroides fragilis GENE traF
+OTU_16,MGE,Plasmid,Plasmid,traK,Bacteroides fragilis GENE traK
+OTU_17,MGE,Plasmid,Plasmid,traN,Bacteroides fragilis GENE traN
+OTU_52,MGE,Plasmid,Plasmid,tsh,Escherichia coli GENE tsh
+OTU_73,Virulence,Virulence,Siderophore,ybtA,Yersinia pestis GENE ybtA
+OTU_74,Virulence,Virulence,Siderophore,ybtP,Yersinia pestis GENE ybtP
+OTU_75,Virulence,Virulence,Siderophore,ybtQ,Yersinia pestis GENE ybtQ
+OTU_53,Virulence,Virulence,Inner membrane ABC transporter,yddA,Escherichia coli GENE yddA

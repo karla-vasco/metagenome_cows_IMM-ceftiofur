@@ -1,0 +1,44 @@
+#!/bin/bash --login
+
+########## Define Resources Needed with SBATCH Lines ##########
+
+#SBATCH --job-name=CAT  # give your job a name for easier identification (same as -J)
+#SBATCH --time=168:00:00        # limit of wall clock time - how long will the job take to run? (same as -t)
+#SBATCH --ntasks=1            # number of tasks - how many tasks (nodes) does your job require? (same as -n)
+#SBATCH --cpus-per-task=16    # number of CPUs (or cores) per task (same as -c)
+#SBATCH --mem=100G             # memory required per node - amount of memory (in bytes)
+#SBATCH --output=/mnt/home/vascokar/mastitis_study/eofiles/CAT.%j.out #Standard output
+#SBATCH --error=/mnt/home/vascokar/mastitis_study/eofiles/CAT.%j.err #Standard error log
+
+
+######### Assign path variables ########
+CAT_DIR=/mnt/home/vascokar/CAT-master/CAT_pack
+DATABASE_DIR=/mnt/home/vascokar/CAT-master/CAT_prepare_20210107/2021-01-07_CAT_database/
+TAXONOMY_DIR=/mnt/home/vascokar/CAT-master/CAT_prepare_20210107/2021-01-07_taxonomy/
+FASTA_DIR=/mnt/home/vascokar/mastitis_study/results/resistome/ARG_host/acc-deepARG/betalactam-contigs
+FAA_DIR=/mnt/home/vascokar/mastitis_study/results/resistome/ARG_host/acc-deepARG/prodigal_betalactam
+OUTPUT_DIR=/mnt/home/vascokar/mastitis_study/results/resistome/ARG_host/acc-deepARG/CAT_output
+
+########## Modules to Load ##########
+
+module purge
+module load DIAMOND/2.0.1
+module load GCCcore/9.3.0 
+module load prodigal/2.6.3
+
+### for loop to run all sequences in the input directory ###
+
+cd $FASTA_DIR
+for f in *_beta-lactam_ARG_contigs.fasta # for each sample f
+
+do
+  n=${f%%_beta-lactam_ARG_contigs.fasta} # strip part of file name
+
+###### Runinng CAT #########
+
+$CAT_DIR/CAT contigs -c $FASTA_DIR/${n}_beta-lactam_ARG_contigs.fasta \
+-d $DATABASE_DIR \
+-t $TAXONOMY_DIR \
+-p $FAA_DIR/${n}_beta-lactam_proteins.faa \
+-o $OUTPUT_DIR/${n}_out.CAT
+done
