@@ -1,6 +1,7 @@
 # Perturbations in Intestinal Antibiotic-resistant Bacterial Populations in Dairy Cattle Following Intramammary Treatment Using a Third-generation Cephalosporin 
 
-#Abstract
+## Abstract
+
 Background. The impact of antimicrobials used to treat and prevent diseases in livestock requires careful monitoring, particularly for drugs considered to be critically important for human medicine. Such is the case of third-generation cephalosporins, which are commonly used in cattle farms. Use of these drugs may select for antibiotic resistant (AR) bacteria including Extended-spectrum β-lactamase (ESBL)-producing Enterobacteriaceae, the most economically impactful antimicrobial-resistant threat. Hence, we sought to evaluate how intramammary (IMM) treatment with ceftiofur impacts the cattle-gut microbiome and the abundance of resistant bacteria.
 
 Methods. Forty healthy dairy cows were enrolled at the end of lactation; 20 were treated with IMM ceftiofur (Spectramast®DC) and a non-antibiotic internal teat sealant (Orbeseal®) and 20 received only Orbeseal® as a control. Fecal samples were collected from each cow before (day -1) and after treatment (weeks 1, 2, 3, 5, 7 & 9) for quantification of bacteria with resistance to β-lactams as well as metagenomic next generation sequencing (mNGS). Gram-negative and -positive bacteria were quantified on MacConkey-lactose and Columbia CNA agar, respectively, while the initial mNGS and bioinformatic analyses were done using CosmosID pipelines.
