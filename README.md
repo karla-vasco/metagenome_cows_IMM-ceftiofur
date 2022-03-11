@@ -15,4 +15,7 @@ Results. One week after dry-off, cows treated with IMM ceftiofur had 3-fold fewe
 Conclusion. This study highlights the long-term effects of 2 g IMM ceftiofur given at dry off on the gut microbiome and resistome composition in dairy cattle. Despite a single IMM administration of a third-generation cephalosporin, treated cattle increased the abundance of genes encoding ESBLs in feces that persisted for 9 weeks. Commensal bacteria were mainly associated with carriage of ESBLs and in lower proportion Enterobacteriaceae. Shedding of ESBL-Enterobacteriaceae was variable among animals, where 75% did not increase the number of ceftiofur-resistant bacteria after IMM antibiotic application. Additional research is therefore needed to identify associations between fecal shedding and the potential for dissemination and persistence of antibiotic resistance determinants in dairy farms.
 
 ## Metagenome analysis
-![alt text](https://github.com/karla-vasco/metagenome_cows_IMM-ceftiofur/blob/main/Metagenome_analysis.png?raw=true)
+
+<p align="center">
+  <img src="https://github.com/karla-vasco/metagenome_cows_IMM-ceftiofur/blob/main/Metagenome_analysis.png?raw=true" />
+</p>
