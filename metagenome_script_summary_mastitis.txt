@@ -1,0 +1,291 @@
+# Metagenome analyses used in publication
+# "Perturbations in Intestinal Antibiotic-resistant Bacterial Populations in Dairy Cattle Following Intramammary Treatment Using a Third-generation Cephalosporin"
+
+########## Quality check and filtering ##########
+
+# FastQC for raw reads https://www.bioinformatics.babraham.ac.uk/projects/fastqc/
+module purge
+module load FastQC/0.11.7-Java-1.8.0_162
+fastqc $RAW_READS_DIRECTORY/*.fastq.gz -o $FASTQC_RAW_DIRECTORY -t 8
+
+# FastQC single report https://multiqc.info/ 
+module purge
+module load GNU/7.3.0-2.30 OpenMPI/3.1.1 
+module load MultiQC/1.7-Python-3.6.6
+
+multiqc $FASTQC_RAW_DIRECTORY -o $OUTPUT_DIRECTORY --filename fastQC_raw_reads
+
+# Trimmomatic https://github.com/usadellab/Trimmomatic
+module purge
+module load Trimmomatic/0.39-Java-11
+
+java -jar $EBROOTTRIMMOMATIC/trimmomatic-0.39.jar \
+      PE \
+      -threads 10 \
+      -summary ${sample_id}_trimmed_stats.tsv \
+      ${sample_id}.1P.fastq.gz ${sample_id}.1U.fastq.gz ${sample_id}.2P.fastq.gz ${sample_id}.2U.fastq.gz \
+      ILLUMINACLIP:nextera.fa:2:30:10:3:TRUE \
+      LEADING:10 \
+      TRAILING:3 \
+      SLIDINGWINDOW:4:15 \
+      MINLEN:36
+
+# FastQC for trimmed reads
+module purge
+module load FastQC/0.11.7-Java-1.8.0_162
+fastqc $TRIMMED_READS_DIRECTORY/*P.fastq.gz -o $FASTQC_TRIMMED_DIRECTORY -t 8
+
+########## Host DNA removal ##########
+
+# Build index Host
+module purge
+module load GCC/5.4.0-2.26  OpenMPI/1.10.3
+module load BWA/0.7.17
+
+host=Bos_taurus.ARS-UCD1.2.dna.toplevel.fa.gz
+bwa index ${host}
+
+# Align Reads to Host
+bwa mem ${host} ${sample_id}.1P.fastq.gz ${sample_id}.2P.fastq.gz -t 10 > ${sample_id}.host.sam
+
+module purge
+module load GCC/9.3.0
+module load SAMtools/1.15
+
+samtools view -bS ${sample_id}.host.sam | samtools sort -@ 10 -o ${sample_id}.host.sorted.bam
+rm ${sample_id}.host.sam
+
+# Remove Host DNA 
+samtools index ${sample_id}.host.sorted.bam && samtools idxstats ${sample_id}.host.sorted.bam > ${sample_id}.samtools.idxstats
+samtools view -h -f 4 -b ${sample_id}.host.sorted.bam -o ${sample_id}.host.sorted.removed.bam
+
+# Non-host reads bam to fastq format
+module purge
+module load GCC/10.2.0
+module load BEDTools/2.30.0
+
+bedtools  \
+       bamtofastq \
+      -i ${sample_id}.host.sorted.removed.bam \
+      -fq ${sample_id}.non.host.R1.fastq \
+      -fq2 ${sample_id}.non.host.R2.fastq
+
+########## Taxonomy with Metaphlan4 ##########
+# https://github.com/biobakery/MetaPhlAn
+
+module purge
+module load Conda/3
+export PATH=$PATH:$HOME/anaconda3/bin
+conda init bash
+conda activate mpa
+
+metaphlan \
+  $INPUT_DIRECTORY/${sample_id}.non.host.R1.fastq,$INPUT_DIRECTORY/${sample_id}.non.host.R2.fastq \
+  --bowtie2out $OUTPUT_DIRECTORY/${sample_id}.bowtie2.bz2 \
+  --nproc 10 \
+  --input_type fastq \
+  --unclassified_estimation \
+  --read_min_len 60 \
+  -t rel_ab_w_read_stats \
+  --stat_q 0.1 \
+  --min_mapq_val -1 \
+  --bt2_ps very-sensitive-local \
+  --add_viruses \
+  -o $OUTPUT_DIRECTORY/profiled_metagenome_${sample_id}.txt \
+  --index mpa_vJan21_CHOCOPhlAnSGB_202103
+
+########## Resistance Gene Identifier (RGI) ##########
+# https://github.com/arpcard/rgi 
+
+module purge
+module load Conda/3
+export PATH=$PATH:$HOME/anaconda3/bin
+conda init bash
+conda activate rgi
+
+rgi bwt \
+    -1 $INPUT_DIRECTORY/${sample_id}.non.host.R1.fastq \
+    -2 $INPUT_DIRECTORY/${sample_id}.non.host.R2.fastq \
+    -a kma \
+    -n 20 \
+    -o $OUTPUT_DIRECTORY/${sample_id}_rgi \
+    --include_wildcard \
+    --include_other_models
+
+########## Plasmid identification with KMA and PLSDB database ##########
+# https://bitbucket.org/genomicepidemiology/kma/src/master/
+# https://ccb-microbe.cs.uni-saarland.de/plsdb 
+
+module purge
+module load Conda/3
+export PATH=$PATH:$HOME/anaconda3/bin
+conda init bash
+conda activate kma
+
+kma index -i plsdb.fna -o PLSDB &&
+kma -mem_mode -ex_mode -1t1 -nc \
+    -ipe $INPUT_DIRECTORY/${sample_id}.non.host.R1.fastq $INPUT_DIRECTORY/${sample_id}.non.host.R2.fastq \
+    -t 8 \
+    -t_db PLSDB \
+    -o $PLSDB_DIRECTORY/${sample_id}
+
+########## Virulence gene identification with KMA and VFDB database ##########
+# http://www.mgc.ac.cn/VFs/download.htm
+
+kma index -i VFDB_setB_nt.fas -o VFDB &&
+kma -mem_mode -ex_mode -1t1 -nc \
+    -ipe $INPUT_DIRECTORY/${sample_id}.non.host.R1.fastq $INPUT_DIRECTORY/${sample_id}.non.host.R2.fastq \
+    -t 8 \
+    -t_db VFDB \
+    -o $VFDB_DIRECTORY/${sample_id}
+
+########## Virus identification with KMA and Virus-Host database ##########
+# https://www.genome.jp/virushostdb/
+
+kma index -i virushostdb.formatted.genomic.fna -o virushost &&
+kma -mem_mode -ex_mode -1t1 -nc \
+    -ipe $INPUT_DIRECTORY/${sample_id}.non.host.R1.fastq $INPUT_DIRECTORY/${sample_id}.non.host.R2.fastq \
+    -t 8 \
+    -ef \
+    -t_db virushost \
+    -o $VIRUS_DIRECTORY/${sample_id}
+
+########## Metagenomic Assembly ##########
+# https://github.com/ablab/spades
+
+module load GCC/5.4.0-2.26  OpenMPI/1.10.3
+module load SPAdes/3.13.0
+
+spades.py --meta \
+    -o $OUTPUT_DIRECTORY/${sample_id} \
+    -1 $INPUT_DIRECTORY/${sample_id}.non.host.R1.fastq.gz \
+    -2 $INPUT_DIRECTORY/${sample_id}.non.host.R2.fastq.gz 
+
+########## Metagenomic Assembly Evaluation ##########
+# https://github.com/ablab/quast
+
+module purge
+module load QUAST/5.0.0
+
+python /opt/software/QUAST/5.0.0/metaquast.py \
+    --references-list $REF_GENOME_LIST \
+    $INPUT_metaSPAdes/${sample_id}/*contigs.fasta
+    -o $QUAST_DIRECTORY/${sample_id}
+
+# Single MetaQuast report https://multiqc.info/
+
+module purge
+module load  GCC/7.3.0-2.30  OpenMPI/3.1.1
+module load MultiQC/1.7-Python-3.6.6
+
+multiqc $QUAST_DIRECTORY/*/report.tsv -o $QUAST_DIRECTORY --filename quast_multiqc
+
+########## Protein-coding gene prediction with Prodigal ##########
+#  https://github.com/hyattpd/Prodigal
+
+module purge
+module load GCCcore/9.3.0 prodigal/2.6.3
+
+prodigal -i $INPUT_DIRECTORY/${sample_id}_contigs.fasta \
+    -o $OUTPUT_DIRECTORY/${sample_id}_coords.gbk \
+    -a $OUTPUT_DIRECTORY/${sample_id}_proteins.faa \
+    -p meta
+
+########## Resistance Gene Identifier (RGI) for translated contigs ##########
+# https://github.com/arpcard/rgi 
+
+module purge
+module load Conda/3
+export PATH=$PATH:$HOME/anaconda3/bin
+conda init bash
+conda activate rgi
+
+rgi main \
+    -i $INPUT_DIRECTORY/${sample_id}_proteins.faa \
+    -o $OUTPUT_DIRECTORY/${sample_id}_rgi \
+    -t protein \
+    -a DIAMOND \
+    -n 20 \
+    --include_loose \
+    --include_nudge \
+    --low_quality
+
+########## Virulence genes ID for translated contigs ##########
+
+module purge
+module load DIAMOND/2.0.1
+
+# making a diamond-formatted database file https://github.com/bbuchfink/diamond
+diamond makedb --in VFDB_setB_pro.fas -d VFDB &&
+
+diamond blastp \
+    -d VFDB \
+    -q $INPUT_DIRECTORY/${sample_id}_proteins.faa \
+    -o $OUTPUT_DIRECTORY/${sample_id}_VFDB_matches.tsv \
+    -f 6 \
+    --id 80 \
+    -k 1 \
+    --max-hsps 1
+
+########## MGEs identification in translated contigs with MobileOG ##########
+# https://github.com/clb21565/mobileOG-db
+
+diamond makedb --in mobileOG-db_beatrix-1.6.All.faa -d mobileOG &&
+
+diamond blastp \
+    -d mobileOG \
+    -q $INPUT_DIRECTORY/${sample_id}_proteins.faa \
+    -o $OUTPUT_DIRECTORY/${sample_id}_mobileOG_matches.tsv \
+    -f 6 \
+    --id 80 \
+    -k 1 \
+    --max-hsps 1
+
+########## Taxonomic classification of Beta-lactamase carrying contigs (BCC) ##########
+
+# Extracting contigs with seqtk https://github.com/lh3/seqtk 
+
+module load  GCC/9.3.0
+module load seqtk/1.3
+
+seqtk subseq $INPUT_DIRECTORY/${sample_id}_contigs.fasta $LIST_DIRECTORY/${sample_id}_contig.lst > $BCC_DIRECTORY/${sample_id}_ESBL_contigs.fasta
+
+# Translating BCC contigs to protein sequences https://github.com/hyattpd/Prodigal 
+
+module purge
+module load GCCcore/9.3.0 prodigal/2.6.3
+
+prodigal -i $BCC_DIRECTORY/${sample_id}_ESBL_contigs.fasta \
+    -o $FAA_DIRECTORY/${sample_id}_esbl_proteins.gbk \
+    -a $FAA_DIRECTORY/${sample_id}_esbl_proteins.faa \
+    -p meta
+
+# Taxonomic classification of BCCs with CAT https://github.com/dutilh/CAT
+
+module purge
+module load DIAMOND/2.0.1
+module load GCCcore/9.3.0 
+module load prodigal/2.6.3
+
+CAT_DIRECTORY=~/CAT-master/CAT_pack
+DATABASE_DIRECTORY=~/CAT-master/CAT_prepare_20210107/2021-01-07_CAT_database
+TAXONOMY_DIRECTORY=~/CAT-master/CAT_prepare_20210107/2021-01-07_taxonomy
+
+$CAT_DIRECTORY/CAT contigs -c $BCC_DIRECTORY/${sample_id}_ESBL_contigs.fasta \
+    -d $DATABASE_DIRECTORY \
+    -t $TAXONOMY_DIRECTORY \
+    -p $FAA_DIRECTORY/${sample_id}_esbl_proteins.faa \
+    -o $OUTPUT_DIRECTORY/${sample_id}.CAT &&
+
+# Adding taxnomic names
+$CAT_DIRECTORY/CAT add_names \
+    -i $OUTPUT_DIRECTORY/${sample_id}.CAT.contig2classification.txt \
+    -o $OUTPUT_DIRECTORY/${sample_id}_names.txt \
+    -t $TAXONOMY_DIRECTORY \
+    --only_official &&
+
+# Summarizing CAT results
+$CAT_DIRECTORY/CAT summarise \
+    -c $BCC_DIRECTORY/${sample_id}_ESBL_contigs.fasta \
+    -i $OUTPUT_DIR/${sample_id}_contig2classification_names.txt \
+    -o $OUTPUT_DIR/${sample_id}_CAT_summary
