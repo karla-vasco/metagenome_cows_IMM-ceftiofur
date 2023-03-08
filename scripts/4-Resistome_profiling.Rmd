@@ -1,0 +1,843 @@
+---
+title: "Resistome profiling"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
+# Import tables and data wrangling
+
+RGI bwt output 
+```{r}
+library(readxl)
+
+setwd("/Users/karlavasco/Library/CloudStorage/OneDrive-MichiganStateUniversity/Manning_lab/Mastitis_project/metagenome_KV/tables/resistome/")
+resistome_full <- read_excel("rgi_mastitis.xlsx", sheet = "RGI_bwt_allele_seqname_noheader")
+```
+
+Filter mutations and eliminate them from the final resistome table
+```{r}
+library(data.table)
+library(dplyr)
+`%notin%` <- Negate(`%in%`)
+mutants1 <- resistome_full %>% filter(`Reference Sequence` %like% "conferring") 
+mutants2 <- resistome_full %>% filter(`Reference Sequence` %like% "muta") 
+resistome <-  resistome_full %>% filter(`Reference Sequence` %notin% c(mutants1$`Reference Sequence`, mutants2$`Reference Sequence`))
+```
+
+Importing sample data
+```{r}
+setwd("/Users/karlavasco/Library/CloudStorage/OneDrive-MichiganStateUniversity/Manning_lab/Mastitis_project/metagenome_KV/tables/metadata/")
+data <- read_excel("IMM_ceftiofur_metadata.xlsx", sheet = "metadata")
+metagenome_stats <- read_excel("IMM_ceftiofur_metadata.xlsx", sheet = "metagenome_stats")
+temperature <- read_excel("IMM_ceftiofur_metadata.xlsx", sheet = "temperature")
+diet <- read_excel("IMM_ceftiofur_metadata.xlsx", sheet = "diet")
+```
+
+Merging tables as metadata
+```{r}
+metadata <- merge(data, diet) %>% 
+  merge(temperature) %>%
+  merge(metagenome_stats) %>% 
+  merge(resistome) %>% 
+  mutate(Treatment = factor(Treatment, levels = c("Control", "Antibiotic")),
+          Time_tx = factor(Time_tx, levels = c("Day -1", "Week 1", "Week 5", "Week 9")))
+```
+
+
+New column with normalized abundance based on Genome equivalents
+```{r}
+metadata <- metadata %>% mutate(normalized_abundance = Depth/genome_equivalents*100)
+```
+
+# Resistome abundance 
+
+Making table
+```{r}
+abundance_feature <- metadata %>% 
+  select(normalized_abundance, Treatment, Time_tx, sample_ID) %>% 
+  group_by(Treatment, Time_tx, sample_ID) %>% 
+  summarise(Abundance = sum(normalized_abundance)) %>% as.data.frame() %>% mutate(Type = "Resistome")
+
+abundance_feature$Treatment <- factor(abundance_feature$Treatment, levels= c("Control","Antibiotic"))
+```
+
+Abundance plot
+```{r}
+library(rstatix)
+library(ggpubr)
+#Calculating p-values between treatments by time point
+stat.test <- abundance_feature %>% 
+  filter(sample_ID %notin% c("MA028.7")) %>% 
+  group_by(Time_tx) %>%
+  wilcox_test(Abundance ~ Treatment, alternative = "less", paired = T) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p.adj") %>%
+  add_xy_position(x = "Time_tx", dodge = 0.8)
+stat.test
+
+Abundance_boxplot <-  abundance_feature %>%  
+  ggboxplot(x = "Time_tx", y = "Abundance", 
+            color = "Treatment", palette = "jama", fill = "Treatment", alpha = 0.5, 
+            add = c("jitter"), outliers = F,notch = F, outlier.shape = NA, 
+            facet.by = "Type",
+            xlab = F, ylab = "Abundance score") +
+  stat_pvalue_manual(stat.test,  label = "p", tip.length = 0, 
+                     y.position = c(81.55,86.24,71.309,75)) +  
+ ylim(30,90)
+
+Abundance_boxplot
+```
+
+
+# Drug class abundance
+
+Table with abundance
+```{r}
+abundance_class <- metadata %>%
+  dplyr::select(normalized_abundance, `Drug Class`, Time_tx, Treatment) %>% 
+  dplyr::group_by(`Drug Class`) %>% 
+  dplyr::summarise(Proportion = sum(normalized_abundance*100/sum(metadata$normalized_abundance))) %>%
+  as.data.frame() %>% 
+  mutate(Type = "Resistome") %>% 
+  arrange(desc(Proportion))
+
+top_20 <- abundance_class %>% dplyr::select(`Drug Class`,Proportion) %>% top_n(10)
+
+abundance_class$Proportion <- format(round(abundance_class$Proportion, 2), nsmall = 2)
+abundance_class$Proportion <- as.numeric(as.character(abundance_class$Proportion))
+head(abundance_class)
+```
+
+Drug-class plot
+```{r fig.width = 6.9, fig.height = 3.2}
+library(stringr) 
+library(ggsci)
+class_plot <- abundance_class %>% 
+  filter(`Drug Class` %in% top_20$`Drug Class`) %>% 
+  mutate(across('Drug Class', str_replace, ' antibiotic', '')) %>%
+  mutate(across('Drug Class', str_replace, ' antibiotic;', ';')) %>% 
+  ggplot(aes(y = reorder(`Drug Class`, +Proportion), 
+             x = Proportion, 
+             color =`Drug Class`,fill=`Drug Class`,
+             ylab=F,
+             label = Proportion)) +
+  geom_bar(stat="identity") +
+    theme_minimal() +
+  geom_text(size = 3, color = "black", hjust = -.2, position = position_identity())+
+    theme(legend.position = "none", axis.title.y = element_blank()) +
+  scale_fill_simpsons() +
+    scale_color_simpsons() +
+  xlim(0,48.5)
+class_plot
+```
+
+Saving plot
+```{r}
+setwd("/Users/karlavasco/Library/CloudStorage/OneDrive-MichiganStateUniversity/Manning_lab/Mastitis_project/metagenome_KV/figures")
+ggsave(plot=class_plot, "resistome_class.png", width = 6.9, height = 3.2,bg="white")
+```
+
+Calculating the number of alleles to manually add in Drug-class plot
+```{r}
+number_alleles_class <- metadata %>%
+  dplyr::select(`ARO Term`, `Drug Class`) %>%
+  distinct() %>% 
+  mutate(count = 1) %>% 
+  dplyr::group_by(`Drug Class`) %>% 
+  summarise(total = sum(count)) %>% 
+  arrange(desc(total))
+number_alleles_class
+```
+
+# Heatmap of ARGs
+
+Selecting the top 70 args
+```{r}
+`%notin%` <- Negate(`%in%`)
+
+presence <- metadata %>%  
+select(`ARO Term`, sample_ID) %>% 
+  group_by(`ARO Term`) %>% 
+  tally() %>% arrange(desc(n))%>% 
+  filter(n>=15)
+
+presence
+
+abundance_allele <- metadata %>% 
+  dplyr::select(normalized_abundance, `ARO Term`, `Reference Model Type`) %>% 
+  dplyr::rename(Allele = `ARO Term`) %>% 
+  dplyr::filter(Allele %in% presence$`ARO Term`) %>% 
+  dplyr::group_by(Allele) %>% 
+  dplyr::summarise(Abundance = sum(normalized_abundance)) %>% as.data.frame()
+
+top70 <- top_n(abundance_allele, 70) %>% arrange(desc(Abundance))
+```
+
+Matrix with sequence_id as columns and features as rows
+```{r}
+library(tibble)
+top70_mx <- metadata %>% select(sample_ID,`ARO Term`,normalized_abundance)%>% 
+  dplyr::select(sample_ID,`ARO Term`,normalized_abundance) %>% 
+  dplyr::rename(Allele = `ARO Term`) %>% 
+  dplyr::filter(Allele %in% top70$Allele) %>% 
+  dplyr::group_by(sample_ID, Allele) %>% 
+  dplyr::summarise(Abundance = sum(normalized_abundance)) %>% 
+  tidyr::spread(Allele, Abundance) %>% 
+  merge(metadata, by="sample_ID") %>%
+  dplyr::arrange(Time_tx,Treatment) %>% 
+  dplyr::select(sample_ID, top70$Allele) %>% 
+  distinct() %>% 
+  remove_rownames %>% column_to_rownames(var="sample_ID") %>% 
+  as.matrix(rownames=TRUE)
+top70_mx[is.na(top70_mx)] <- 0
+```
+
+Annotations for plot
+```{r}
+annotations <- metadata %>% 
+  select(sample_ID,Treatment, Time_tx) %>% 
+  distinct() %>% 
+  remove_rownames %>% column_to_rownames(var="sample_ID")
+
+anno_color <- list(Treatment = c(Control = "#374E55FF", 
+                                 Antibiotic = "#DF8F44FF"), 
+                   Time_tx = c(`Day -1` = "#3B4992FF", 
+                               `Week 1` = "#EE0000FF", 
+                               `Week 5` = "#008B45FF", 
+                               `Week 9` = "#631879FF"))
+```
+
+Heatmap plot
+```{r fig.width = 9, fig.height = 10}
+library(pheatmap)
+library(viridis) 
+
+# Gene names in italics
+newnames <- lapply(
+  colnames(top70_mx),
+  function(x) bquote(italic(.(x))))
+
+# Heatmap
+heatmap <- pheatmap(
+  mat               = t(log10(top70_mx+0.0000001)),
+  border_color      = NA,
+  show_colnames     = F,
+  show_rownames     = T,
+  angle_col = 90,
+  color = viridis(100),  annotation_col = annotations,
+  annotation_colors = anno_color,
+  annotation_names_row = F,
+  cluster_cols = F,
+  cluster_rows = T,
+  clustering_method = "ward.D",
+  gaps_row = FALSE,
+  labels_row = as.expression(newnames)
+)
+
+heatmap
+```
+
+Saving heatmap
+```{r}
+setwd("/Users/karlavasco/Library/CloudStorage/OneDrive-MichiganStateUniversity/Manning_lab/Mastitis_project/metagenome_KV/figures")
+ggsave(plot=heatmap, "heatmap_resistome.png", width = 9, height = 10)
+```
+
+
+# Microbiome diversity
+
+## Phyloseq table formatting
+
+Feature table used for alpha diversity: Matrix with sequence_id as columns and features as rows
+```{r}
+library(tibble)
+feature_alpha <- metadata %>% select(sequence_id,`Reference Sequence`,Depth) %>% 
+  spread(sequence_id, Depth) %>% 
+  remove_rownames %>% column_to_rownames(var="Reference Sequence") %>% 
+  as.matrix(rownames=TRUE)
+feature_alpha[is.na(feature_alpha)] <- 0
+```
+
+Taxonomy table
+```{r}
+taxonomy <- resistome_full %>% select(`Reference Sequence`,	`Reference Model Type`,	`Drug Class`,	`Resistance Mechanism`,`AMR Gene Family`,`ARO Term`) %>% distinct() %>%
+  rename(Model = `Reference Model Type`,Class=`Drug Class`,Mechanism=`Resistance Mechanism`,Family=`AMR Gene Family`,Allele=`ARO Term`) %>% 
+  remove_rownames %>% column_to_rownames(var="Reference Sequence") %>% 
+  as.matrix()
+```
+
+Metadata to matrix
+```{r}
+metadata_matrix <- merge(data,metagenome_stats) %>% remove_rownames %>% column_to_rownames(var="sequence_id")
+```
+
+Phyloseq object
+```{r}
+library("phyloseq")
+feature_alpha <- feature_alpha*10^4
+mode(feature_alpha) <- "integer"
+feature_alpha[is.na(feature_alpha)] <- 0
+
+#import as phyloseq objects
+OTU = otu_table(feature_alpha,taxa_are_rows=TRUE)
+TAX = tax_table(taxonomy)
+META = sample_data(metadata_matrix)
+physeq=phyloseq(OTU,TAX,META)
+```
+
+## Alpha diversity
+```{r fig.width=10, fig.height=40}
+alpha_diversity <- estimate_richness(physeq, measures = c("Shannon", "Observed"))
+df_alpha <- data.frame(alpha_diversity, sample_data(physeq))
+alpha_table <- reshape2::melt(df_alpha, measure.var=c("Shannon","Observed"),id.vars=c("Time_tx","Treatment","sample_ID","study_ID","Block","Cohort")) %>% 
+  rename(Index = variable)
+alpha_table$value = as.numeric(alpha_table$value)
+alpha_table$Treatment <- factor(alpha_table$Treatment, levels= c("Control","Antibiotic"))
+alpha_table <- alpha_table %>% mutate(Type = "Resistome")
+```
+
+Shannon diversity
+```{r}
+#Calculating p-values between treatments by time point
+stat.test <- alpha_table %>% 
+  filter(Index == "Shannon", sample_ID %notin% c("MA028.7")) %>% 
+  group_by(Time_tx) %>%
+  wilcox_test(value ~ Treatment, alternative = "greater", paired = T) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p.adj") %>%
+  add_xy_position(x = "Time_tx", dodge = 0.8)
+stat.test
+
+#Boxplot of Shannon diversity between treatment groups over time
+shannon_boxplot = alpha_table %>% 
+  filter(Index == "Shannon") %>% 
+  ggboxplot(x = "Time_tx", y = "value", 
+            color = "Treatment", palette = "jama", fill = "Treatment", alpha = 0.5,
+            add = c("jitter"), notch = F, outlier.shape = NA, facet.by = "Type",
+            xlab = F, ylab = "Shannon Index", legend = "none") +
+  ylim(3.1,5.1)+
+  stat_pvalue_manual(stat.test,  label = "p", tip.length = 0)
+
+shannon_boxplot
+```
+
+Observed diversity
+```{r}
+#Calculating p-values between treatments by time point
+stat.test <- alpha_table %>% 
+  filter(Index == "Observed", sample_ID %notin% c("MA028.7")) %>% 
+  group_by(Time_tx) %>%
+  wilcox_test(value ~ Treatment, alternative = "greater", paired = T) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p.adj") %>%
+  add_xy_position(x = "Time_tx", dodge = 0.8)
+stat.test
+
+library(ggpubr)
+library(ggsci)
+#Boxplot of Observed diversity between treatment groups over time
+Observed_boxplot = alpha_table %>% 
+  filter(Index == "Observed") %>% 
+  ggboxplot(x = "Time_tx", y = "value", 
+            color = "Treatment", palette = "jama", fill = "Treatment", alpha = 0.5,
+            add = c("jitter"), notch = F, outlier.shape = NA, facet.by = "Type",
+            xlab = F, ylab = "Shannon Index", legend = "none") +
+  ylim(90,400)+
+  stat_pvalue_manual(stat.test,  label = "p", tip.length = 0)
+
+Observed_boxplot
+```
+
+## Beta diversity 
+Feature table used for beta diversity and differential abudance analyses: Matrix with sequence_id as columns and features as rows
+```{r}
+library(tibble)
+feature_table <- metadata %>% select(sequence_id,`Reference Sequence`,normalized_abundance) %>% 
+  spread(sequence_id, normalized_abundance) %>% 
+  remove_rownames %>% column_to_rownames(var="Reference Sequence") %>% 
+  as.matrix(rownames=TRUE)
+feature_table[is.na(feature_table)] <- 0
+```
+
+Phyloseq object for beta diversity
+```{r}
+library("phyloseq")
+#import as phyloseq objects
+OTU = otu_table(feature_table,taxa_are_rows=TRUE)
+#(tree was already imported as a phyloseq object)
+physeq=phyloseq(OTU,TAX,META)
+```
+
+Agglomerating ARGs by allele
+```{r}
+physeq <- tax_glom(physeq, "Allele")
+```
+
+PERMANOVA by Time
+```{r}
+library(microbial)
+beta <-betatest(physeq,group="Time_tx")
+beta
+```
+
+Bray-Curtis plot
+```{r fig.width=8}
+bray_resistome <- plotbeta(
+  physeq,
+  group="Time_tx",
+  shape = "Treatment",
+  distance = "bray",
+  method = "PCoA",
+  color = F,
+  size = 3,
+  ellipse = F) + 
+  labs(color = "Time", shape = "Treatment", fill="Time") + 
+  annotate("text", x = 0, y = -0.22, label = expression(paste("PERMANOVA, ",F ,"= 11.98, ",paste(italic('p')),"=0.001")), colour = "black", size = 4) + 
+  ggtitle("Resistome") +
+  stat_ellipse(geom = "polygon",
+               aes(fill = Time_tx, group=Time_tx), 
+               alpha = 0.1)+
+  scale_fill_aaas() +
+  scale_color_aaas()+
+  theme_bw()
+bray_resistome
+```
+
+Arranging microbiome plots
+```{r fig.width = 10, fig.height = 6}
+resistome_plots <- ggarrange(Abundance_boxplot, class_plot, shannon_boxplot, bray_resistome, labels = c("A","C","B","D"), widths = c(1,2,1,2), heights = c(1.2,1), nrow = 2,ncol = 2)
+resistome_plots
+```
+
+Saving plot
+```{r}
+setwd("/Users/karlavasco/Library/CloudStorage/OneDrive-MichiganStateUniversity/Manning_lab/Mastitis_project/metagenome_KV/figures")
+ggsave(plot=resistome_plots, "Fig5_resistome_plots2.png", width = 10, height = 6, bg="white")
+```
+
+
+# Beta-lactamases 
+
+List of betalactamases with cephalosporin activity
+```{r}
+library(data.table)
+taxonomy_df <- as.data.frame(taxonomy)
+betalactamases <- taxonomy_df[taxonomy_df$Family %like% "beta-lactamase", ]
+esbls <- betalactamases[betalactamases$Class %like% "ceph", ]
+ceph <-  taxonomy_df[taxonomy_df$Class %like% "ceph", ]
+```
+
+ESBLs abundance matrix
+```{r fig.height=10}
+betalactamases_mx <- metadata %>% 
+  select(sample_ID,`ARO Term`,normalized_abundance) %>% 
+  dplyr::select(sample_ID,`ARO Term`,normalized_abundance) %>% 
+  dplyr::rename(Allele = `ARO Term`) %>% 
+  dplyr::filter(Allele %in% esbls$Allele) %>% 
+  dplyr::group_by(sample_ID, Allele) %>% 
+  dplyr::summarise(Abundance = sum(normalized_abundance)) %>% 
+  tidyr::spread(Allele, Abundance) %>% 
+  merge(metadata, by="sample_ID") %>%
+  dplyr::arrange(Time_tx,Treatment) %>% 
+  dplyr::select(sample_ID, esbls$Allele) %>% 
+  distinct() %>% 
+  remove_rownames %>% column_to_rownames(var="sample_ID")%>% 
+  as.matrix(rownames=TRUE)
+betalactamases_mx[is.na(betalactamases_mx)] <- 0
+```
+
+ESBLs Heatmap
+```{r fig.height=20, fig.width=6}
+newnames <- lapply(
+  colnames(betalactamases_mx),
+  function(x) bquote(italic(.(x))))
+
+#HEATMAP RA USING ln color pallet RBrewer
+heatmap <- pheatmap(
+  mat               = t(log10(betalactamases_mx+0.0000001)),
+  border_color      = NA,
+  show_colnames     = F,
+  show_rownames     = T,
+  angle_col = 90,
+  color = viridis(100),  
+  annotation_col = annotations,
+  annotation_colors = anno_color,
+  annotation_names_row = F,
+  cluster_cols = F,
+  cluster_rows = F,
+  clustering_method = "ward.D",
+  gaps_row = FALSE,
+  labels_row = as.expression(newnames)
+)
+heatmap
+```
+
+Saving ESBL heatmap
+```{r}
+setwd("/Users/karlavasco/Library/CloudStorage/OneDrive-MichiganStateUniversity/Manning_lab/Mastitis_project/metagenome_KV/figures")
+ggsave(plot=heatmap, "heatmap_esbls.png", width = 9, height = 18)
+```
+
+Cephalosporin resistance abundance table
+```{r}
+cephalosporin <- metadata %>%
+  dplyr::select(sample_ID,`ARO Term`,normalized_abundance,Time_tx,Treatment) %>% 
+  dplyr::rename(Allele = `ARO Term`) %>% 
+  dplyr::filter(Allele %in% ceph$Allele) %>% 
+  dplyr::group_by(sample_ID, Time_tx,Treatment) %>% 
+  dplyr::summarise(Abundance = sum(normalized_abundance)) %>% 
+  dplyr::mutate(Type="Cephalosporin resistance")
+cephalosporin$Treatment <- factor(cephalosporin$Treatment, levels= c("Control","Antibiotic"))
+```
+
+Cephalosporin resistance plot
+```{r}
+#Calculating p-values between treatments by time point
+stat.test <- cephalosporin %>%  
+  filter(sample_ID %notin% c("MA028.7")) %>% 
+  group_by(Time_tx) %>%
+  wilcox_test(Abundance ~ Treatment, alternative = "less", paired = T) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p.adj") %>%
+  add_xy_position(x = "Time_tx", dodge = 0.8)
+stat.test
+
+
+cephalosporin_boxplot = cephalosporin %>% 
+  ggboxplot(x = "Time_tx", y = "Abundance", 
+            color = "Treatment", palette = "jama", fill = "Treatment", alpha = 0.5,
+            add = c("jitter"), notch = F, outlier.shape = NA,
+            facet.by = "Type", 
+            xlab = F, ylab = "Abundance score") +
+  ylim(2,31)+
+  stat_pvalue_manual(stat.test,  label = "p", tip.length = 0) +
+  geom_signif(aes(y = Abundance, x = Time_tx),
+              comparisons = list(c("Day -1","Week 1"),c("Week 5", "Week 9")), 
+              test = "wilcox.test", 
+              test.args=list(alternative = "less", var.equal = FALSE, paired=FALSE), 
+              color = "black", tip_length = 0.02, y_position = c(21,23)) +
+  geom_signif(data = dplyr::filter(cephalosporin, Treatment == "Control"),
+      mapping=aes(y = Abundance, x = Time_tx), 
+      comparisons = list(c("Day -1","Week 1"),c("Week 5", "Week 9")),
+      test = "wilcox.test", step_increase = 0.04, y_position = c(19,20), 
+      color = "#374e55", tip_length = 0.002, 
+      test.args=list(alternative = "less", var.equal = FALSE, paired=T), textsize = 3.5) +
+    geom_signif(data = dplyr::filter(cephalosporin, Treatment == "Antibiotic", sample_ID %notin% "MA029.5"), 
+                mapping=aes(y = Abundance, x = Time_tx), 
+                comparisons = list(c("Day -1","Week 1"), c("Week 5", "Week 9")),  
+                test = "wilcox.test", step_increase = 0.04, y_position = c(17,18), 
+                color = "#df8f44", tip_length = 0.002, 
+                test.args=list(alternative = "less", var.equal = FALSE, paired=T), textsize = 3.5)
+
+cephalosporin_boxplot
+```
+Cephalosporin inactivation abundance table
+```{r}
+cephalosporin_inactivation <- metadata %>%
+  dplyr::filter(`Resistance Mechanism` == "antibiotic inactivation") %>% 
+  dplyr::select(sample_ID,`ARO Term`,normalized_abundance,Time_tx,Treatment) %>% 
+  dplyr::rename(Allele = `ARO Term`) %>% 
+  dplyr::filter(Allele %in% ceph$Allele) %>% 
+  dplyr::group_by(sample_ID, Time_tx,Treatment) %>% 
+  dplyr::summarise(Abundance = sum(normalized_abundance)) %>% 
+  dplyr::mutate(Type="Beta-lactamases")
+cephalosporin_inactivation$Treatment <- factor(cephalosporin_inactivation$Treatment, levels= c("Control","Antibiotic"))
+```
+
+Cephalosporin inactivation (Beta-lactamases) abundance plot
+```{r}
+#Calculating p-values between treatments by time point
+stat.test <- cephalosporin_inactivation %>%  
+  filter(sample_ID %notin% c("MA028.7")) %>% 
+  group_by(Time_tx) %>%
+  wilcox_test(Abundance ~ Treatment, alternative = "less", paired = T) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p.adj") %>%
+  add_xy_position(x = "Time_tx", dodge = 0.8)
+stat.test
+
+library(ggpubr)
+library(ggsci)
+betalactamases_boxplot = cephalosporin_inactivation %>% 
+  ggboxplot(x = "Time_tx", y = "Abundance", 
+            color = "Treatment", palette = "jama", fill = "Treatment", alpha = 0.5,
+            add = c("jitter"), notch = F, outlier.shape = NA,
+            facet.by = "Type",
+            xlab = F, ylab = "Abundance score") +
+  scale_fill_jama(alpha = 0.5) +
+  ylim(2,24)+
+  stat_pvalue_manual(stat.test,  label = "p", tip.length = 0) +
+  geom_signif(aes(y = Abundance, x = Time_tx),
+                comparisons = list(c("Day -1","Week 1"), c("Week 5", "Week 9")),  
+              test = "wilcox.test", 
+              test.args=list(alternative = "less", var.equal = FALSE, paired=F), 
+              color = "black", tip_length = 0.02, y_position = c(18,22)) +
+  geom_signif(data = dplyr::filter(cephalosporin_inactivation, Treatment == "Control"), 
+      mapping=aes(y = Abundance, x = Time_tx), 
+      comparisons = list(c("Day -1","Week 1"), c("Week 5", "Week 9")),  
+      test = "wilcox.test", step_increase = 0.04, y_position = c(16.5,19.5), 
+      color = "#374e55", tip_length = 0.002, 
+      test.args=list(alternative = "less", var.equal = FALSE, paired=T),textsize = 3.5) +
+    geom_signif(data = dplyr::filter(cephalosporin_inactivation, Treatment == "Antibiotic", sample_ID %notin% "MA029.5"),
+                mapping=aes(y = Abundance, x = Time_tx), 
+                comparisons = list(c("Day -1","Week 1"), c("Week 5", "Week 9")),  
+                test = "wilcox.test", step_increase = 0.04, y_position = c(15,18), 
+                color = "#df8f44", tip_length = 0.002, 
+                test.args=list(alternative = "less", var.equal = FALSE, paired=T), textsize = 3.5)
+
+betalactamases_boxplot
+```
+
+Table with the most abundant beta-lacatamases 
+```{r}
+beta_alleles <- metadata %>%
+    dplyr::rename(Allele = `ARO Term`) %>% 
+    dplyr::filter(Allele %in% c("CfxA6","CfxA2","ACI-1")) %>% 
+  dplyr::select(sample_ID,Allele,normalized_abundance,Time_tx,Treatment) %>% 
+  dplyr::filter(Allele %in% ceph$Allele) %>% 
+  dplyr::group_by(sample_ID, Time_tx,Treatment,Allele) %>%
+  dplyr::summarise(Abundance = sum(normalized_abundance))
+  
+beta_alleles$Treatment <- factor(beta_alleles$Treatment, levels= c("Control","Antibiotic"))
+```
+
+Plot of the most abundant betalactamases
+```{r}
+#Calculating p-values between treatments by time point
+stat.test <- beta_alleles %>%  
+  group_by(Time_tx,Allele) %>%
+  wilcox_test(Abundance ~ Treatment, alternative = "less") %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p") %>%
+  add_xy_position(x = "Time_tx", dodge = 0.8)
+stat.test
+
+
+alleles_boxplot = beta_alleles %>% 
+  ggboxplot(x = "Time_tx", y = "Abundance", 
+            color = "Treatment", palette = "jama", fill = "Treatment", alpha = 0.5,
+            add = c("jitter"), notch = F, outlier.shape = NA,
+            facet.by = "Allele", nrow = 1,ncol = 5, scales = "free",
+            xlab = F, ylab = "Abundance score") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+
+alleles_boxplot
+```
+
+
+```{r}
+beta_alleles_taxa_alleles <- metadata %>%
+  dplyr::rename(Allele = `ARO Term`) %>% 
+  dplyr::select(Allele,`Resistomes & Variants: Observed Pathogen(s)`) %>% 
+  dplyr::filter(Allele %in% esbls$Allele)
+head(beta_alleles_taxa_alleles)
+```
+Saving taxa associated with beta-lactamases
+```{r}
+setwd("/Users/karlavasco/Library/CloudStorage/OneDrive-MichiganStateUniversity/Manning_lab/Mastitis_project/metagenome_KV/tables/")
+write.csv(beta_alleles_taxa_alleles, "./resistome/beta_alleles_taxa_alleles.csv",row.names = T)
+```
+
+# Differential abundance analyses
+
+Aggregate phyloseq objects by time points
+```{r}
+physeq_day1 <- subset_samples(physeq, Time_tx%in%"Day -1")
+physeq_week1 <- subset_samples(physeq, Time_tx%in%c("Week 1"))
+physeq_week5 <- subset_samples(physeq, Time_tx%in%c("Week 5"))
+physeq_week9 <- subset_samples(physeq, Time_tx%in%c("Week 9"))
+```
+
+Day 1 (other time points were done in the same way)
+```{r}
+physeq <- physeq_day1
+```
+
+LEfSE
+```{r}
+lefse <- microbial::ldamarker(physeq, group="Treatment", pvalue = 0.05, normalize = T,method = "log2")
+lefse_sigtab <- lefse[which(lefse$p.value<0.05), ]
+lefse_sigtab <- lefse_sigtab %>% select(rank, direction,tax, LDAscore, p.value, p.adj) %>% arrange(tax)
+```
+
+ANCOMBC
+```{r}
+library(nloptr)
+library(ANCOMBC)
+#ANCOMBC analysis comparison between treatment groups
+out = ancombc(data = physeq, formula = "Treatment", 
+              p_adj_method = "holm", lib_cut = 0,
+              group = "Treatment", struc_zero = F, neg_lb = FALSE,
+              tol = 1e-05, max_iter = 100, conserve = TRUE,
+              alpha = 0.05, global = TRUE)
+
+#ANCOMBC results as a list
+res = out$res
+
+#ANCOMBC results as a table
+ancom_results = res %>% as.data.frame()
+
+# Filtering only significant results
+ancom_signif <- ancom_results %>% dplyr::filter(p_val.TreatmentControl <= 0.05)
+```
+
+Saving Lefse and ANCOM-BC results as an Excel file
+```{r}
+#setwd("/Users/karlavasco/Library/CloudStorage/OneDrive-MichiganStateUniversity/Manning_lab/Mastitis_project/metagenome_KV/tables/differential/microbiome_metaphlan")
+
+#library(xlsx)
+#write.xlsx(as.data.frame(lefse_sigtab), file="microbiome_day1_treatment_diff.xlsx", sheetName="lefse", row.names=FALSE)
+#write.xlsx(ancom_signif, file="microbiome_day1_treatment_diff.xlsx", sheetName="ancombc", append=TRUE, row.names=FALSE)
+```
+
+MaAsLin2
+```{r results = FALSE}
+library(Maaslin2)
+setwd("/Users/karlavasco/Library/CloudStorage/OneDrive-MichiganStateUniversity/Manning_lab/Mastitis_project/metagenome_KV/tables/differential/resistome_rgi_ge")
+# Formating abundance table for MaAsLin2 
+table <- merge(physeq@tax_table,data.frame(otu_table(physeq)), by = 0) %>% remove_rownames %>% column_to_rownames(var="Row.names")
+
+fit_data = Maaslin2(
+  input_data = merge(physeq@tax_table,data.frame(otu_table(physeq)), by = 0) %>% 
+    remove_rownames %>% column_to_rownames(var="Row.names")  %>% select(6:45),
+  input_metadata = metadata_matrix,
+  output = 'maaslin2_resistome_day1_notemp',
+  fixed_effects = c('Treatment'),
+#  random_effects = c("temperature_Celsius"),
+  min_prevalence = 0.01,
+  min_abundance =  0.0,
+  standardize = T
+)
+```
+
+
+## Plots of differential abundance analyses
+
+Importing results manually curated and compared between pipelines
+
+```{r}
+library(readxl)
+
+setwd("/Users/karlavasco/Library/CloudStorage/OneDrive-MichiganStateUniversity/Manning_lab/Mastitis_project/metagenome_KV/tables/resistome/differential")
+diff_alleles <- read_excel("resistome_rgi_ge_diff_summary.xlsx", sheet = "alleles")
+```
+
+Calculating the mean of each alelle per time-point
+```{r}
+mean_alleles <- metadata %>% select(`ARO Term`,Time_tx,normalized_abundance) %>% 
+  rename(Allele = `ARO Term`) %>% 
+  group_by(Allele,Time_tx) %>% summarise(mean_allele = mean(normalized_abundance))
+```
+
+Making table with differential abunances including a column with mean alleles
+```{r}
+differential <- metadata %>% 
+  rename(Allele = `ARO Term`) %>% 
+  merge(diff_alleles, by = "Allele") %>% 
+  merge(mean_alleles, by = c("Allele","Time_tx"))
+differential$Treatment <- factor(differential$Treatment, levels= c("Control","Antibiotic"))
+```
+
+Differential plot week 1
+```{r fig.width=8, fig.height=6}
+diff_week1 <- differential %>% 
+  filter(`Week 1` >= 1,Time_tx=="Week 1") %>%
+  select(Allele,normalized_abundance,Treatment,mean_allele) %>% 
+  mutate(fc = normalized_abundance/mean_allele) %>% 
+  select(Allele,fc,Treatment) %>% mutate(time = "Week 1")
+diff_week1$fc <- as.numeric(as.character(diff_week1$fc))
+
+order_allele <- diff_week1 %>% filter(Treatment =="Antibiotic") %>%
+  select(Allele,fc) %>% 
+  group_by(Allele) %>% 
+  dplyr::summarise(mean_fc = mean(fc)) %>% 
+  arrange(mean_fc)
+
+week1_plot <- diff_week1 %>% 
+  mutate(fc_flip = case_when(Treatment == "Control" 
+                            ~ fc*-1,
+                             Treatment == "Antibiotic" 
+                            ~ fc*1)) %>% 
+  ggbarplot(x="Allele", y = "fc", add="mean_se",color = "Treatment", fill = "Treatment",palette = "jama",orientation = "horiz", alpha = 0.5,legend = "right", ylab = "Mean fold change", xlab = "",facet.by = "time", order = order_allele$Allele) +
+  geom_hline(yintercept = c(1), linetype="dotted", 
+                color = "black", size=1) 
+week1_plot
+```
+
+Differential plot week 5
+```{r fig.width=8, fig.height=6}
+diff_week5 <- differential %>% 
+  filter(`Week 5` >= 1,Time_tx=="Week 5") %>%
+  select(Allele,normalized_abundance,Treatment,mean_allele) %>% 
+  mutate(fc = normalized_abundance/mean_allele) %>% 
+  select(Allele,fc,Treatment) %>% mutate(time = "Week 5")
+diff_week5$fc <- as.numeric(as.character(diff_week5$fc))
+
+order_allele <- diff_week5 %>% 
+  filter(Treatment =="Antibiotic") %>%
+  select(Allele,fc) %>% 
+  group_by(Allele) %>% 
+  dplyr::summarise(mean_fc = mean(fc)) %>% 
+  rbind(data_frame(
+    Allele=c("vanR gene in vanA cluster","mef(B)"),
+    mean_fc=c(0,0))) %>% 
+  arrange(mean_fc)
+
+week5_plot <- diff_week5 %>% 
+  ggbarplot(x="Allele", y = "fc", add="mean_se",color = "Treatment", fill = "Treatment",palette = "jama",orientation = "horiz", alpha = 0.5,legend = "right", ylab = "Mean fold change", xlab = "",facet.by = "time", order = order_allele$Allele) +
+  geom_hline(yintercept = 1, linetype="dotted", 
+                color = "black", size=1)
+#+ ylim(0,2)
+week5_plot
+```
+
+Differential plot week 9
+```{r fig.width=8, fig.height=6}
+diff_week9 <- differential %>% 
+  filter(`Week 5` >= 1,Time_tx=="Week 9") %>%
+  select(Allele,normalized_abundance,Treatment,mean_allele) %>% 
+  mutate(fc = normalized_abundance/mean_allele) %>% 
+  select(Allele,fc,Treatment) %>% mutate(time = "Week 9")
+diff_week9$fc <- as.numeric(as.character(diff_week9$fc))
+
+order_allele <- diff_week9 %>% filter(Treatment =="Antibiotic") %>%
+  select(Allele,fc) %>% 
+  group_by(Allele) %>% 
+  dplyr::summarise(mean_fc = mean(fc)) %>% 
+  rbind(data_frame(Allele="OXA-465",mean_fc=0)) %>% 
+  arrange(mean_fc)
+
+week9_plot <- diff_week9 %>% 
+  ggbarplot(x="Allele", y = "fc", add="mean_se",color = "Treatment", fill = "Treatment",palette = "jama",orientation = "horiz", alpha = 0.5,legend = "right", ylab = "Mean fold change", xlab = "",facet.by = "time", order = order_allele$Allele) +
+  geom_hline(yintercept = 1, linetype="dotted", 
+                color = "black", size=1)
+#+ ylim(0,2)
+week9_plot
+```
+
+Merging differential plots
+```{r fig.width=12}
+diff_plots <- ggarrange(week1_plot,week5_plot,week9_plot,common.legend = T,ncol=3,nrow = 1, widths = c(1,1.5,1.5))
+diff_plots
+```
+
+Final figure of cephalosporin abundance and differentially abundant alleles
+```{r}
+beta_boxplots <- ggarrange(cephalosporin_boxplot,betalactamases_boxplot, common.legend = T, labels = c("A","B")) 
+
+beta_figure <- ggarrange(beta_boxplots, diff_plots, nrow = 2, heights = c(1,1.2), widths = c(1,1.2), labels = c("","C"))
+beta_figure
+```
+
+Saving final figure as a PDF for further modification of allele names
+```{r}
+pdf("/Users/karlavasco/Library/CloudStorage/OneDrive-MichiganStateUniversity/Manning_lab/Mastitis_project/metagenome_KV/figures/Fig6_cephalosporin_diff.pdf", onefile=FALSE, height = 9, width = 12)
+beta_figure
+dev.off()
+```

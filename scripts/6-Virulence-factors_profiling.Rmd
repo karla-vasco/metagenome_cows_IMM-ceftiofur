@@ -1,0 +1,247 @@
+---
+title: "Virulence-factor (VF) profiling"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
+# Activating Libraries
+```{r error=FALSE}
+library(readxl)
+library(ggpubr)
+library(ggsci)
+library(dplyr)
+library(rstatix)
+
+# Function use to filter data that do not contain an element or list of elements with dplyr
+`%notin%` <- Negate(`%in%`)
+```
+
+# Data wrangling
+
+Importing data
+```{r}
+library(readr)
+
+setwd("/Users/karlavasco/Library/CloudStorage/OneDrive-MichiganStateUniversity/Manning_lab/Mastitis_project/metagenome_KV/tables/virulence/")
+virulence <- read_tsv("VFDB_kma_seqname_seqname_noheader.tsv",col_names = c("Template",	"Score",	"Expected",	"Template_length",	"Template_Identity",	"Template_Coverage",	"Query_Identity",	"Query_Coverage",	"Depth",	"q_value",	"p_value","sequence_id"))
+```
+
+# Importing data
+```{r}
+setwd("/Users/karlavasco/Library/CloudStorage/OneDrive-MichiganStateUniversity/Manning_lab/Mastitis_project/metagenome_KV/tables/metadata/")
+data <- read_excel("IMM_ceftiofur_metadata.xlsx", sheet = "metadata")
+temperature <- read_excel("IMM_ceftiofur_metadata.xlsx", sheet = "temperature")
+diet <- read_excel("IMM_ceftiofur_metadata.xlsx", sheet = "diet")
+metagenome_stats <- read_excel("IMM_ceftiofur_metadata.xlsx", sheet = "metagenome_stats")
+```
+
+Merging tables for metadata
+```{r}
+merged <- merge(data, diet) %>% 
+  merge(temperature) %>%
+  merge(metagenome_stats) %>% 
+  merge(virulence) %>% 
+  mutate(Treatment = factor(Treatment, levels = c("Control", "Antibiotic")),
+          Time_tx = factor(Time_tx, levels = c("Day -1", "Week 1", "Week 5", "Week 9")))
+```
+
+New column with normalized abundance based on Genome equivalents
+```{r}
+merged <- merged %>% mutate(normalized_abundance = Depth/genome_equivalents*100)
+```
+
+# VF abundance
+
+VF Abundance table
+```{r}
+abundance_feature <- merged %>% 
+  select(normalized_abundance, Treatment, Time_tx, sample_ID) %>% 
+  group_by(Treatment, Time_tx, sample_ID) %>% 
+  dplyr::summarise(Abundance = sum(normalized_abundance)) %>% as.data.frame() %>% mutate(Type="Virulence")
+
+abundance_feature$Treatment <- factor(abundance_feature$Treatment, levels= c("Control","Antibiotic"))
+
+```
+
+Abundance plot
+```{r}
+#Calculating p-values between treatments by time point
+stat.test <- abundance_feature %>% 
+ dplyr::filter(sample_ID %notin% c("MA028.7")) %>% 
+  group_by(Time_tx) %>%
+  wilcox_test(Abundance ~ Treatment, alternative = "greater", paired = T) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p.adj") %>%
+  add_xy_position(x = "Time_tx", dodge = 0.8)
+stat.test
+
+#Boxplot of Observed diversity between treatment groups over time
+Abundance_vf = abundance_feature %>%  
+  ggboxplot(x = "Time_tx", y = "Abundance", color = "Treatment", palette = "jama", fill = "Treatment", add = c("jitter"), notch = F, outlier.shape = NA,facet.by = "Type", ylab = F, xlab = F) +
+  scale_fill_jama(alpha = 0.5) +
+  stat_pvalue_manual(stat.test,  label = "p", tip.length = 0, y.position = c(25,20,18,25)) +
+ylim(5,28) + theme(axis.title.x = element_blank())
+
+Abundance_vf
+```
+
+# VF diversity
+
+## Phyloseq table formatting
+
+Feature table used for alpha diversity: Matrix with sequence_id as columns and features as rows
+```{r}
+library(tibble)
+feature_alpha <- merged %>% select(sequence_id,Template,Depth) %>% 
+  spread(sequence_id, Depth) %>% 
+  remove_rownames %>% column_to_rownames(var="Template") %>% 
+  as.matrix(rownames=TRUE)
+feature_alpha[is.na(feature_alpha)] <- 0
+```
+
+Taxonomy table
+```{r}
+taxonomy <- virulence %>% select(Template) %>% distinct() %>%
+  mutate(Feature = Template) %>% 
+  remove_rownames %>% column_to_rownames(var="Template") %>% 
+  as.matrix()
+```
+
+Metadata to matrix
+```{r}
+metadata_matrix <-  merge(data,metagenome_stats) %>% remove_rownames %>% column_to_rownames(var="sequence_id")
+```
+
+Phyloseq object
+```{r}
+library("phyloseq")
+feature_alpha <- feature_alpha*10^4
+mode(feature_alpha) <- "integer"
+feature_alpha[is.na(feature_alpha)] <- 0
+
+#import as phyloseq objects
+OTU = otu_table(feature_alpha,taxa_are_rows=TRUE)
+TAX = tax_table(taxonomy)
+META = sample_data(metadata_matrix)
+
+physeq=phyloseq(OTU,TAX,META)
+```
+
+## Alpha diversity
+```{r fig.width=10, fig.height=40}
+alpha_diversity <- estimate_richness(physeq, measures = c("Shannon", "Observed", "Chao1"))
+df_alpha <- data.frame(alpha_diversity, sample_data(physeq))
+alpha_table <- reshape2::melt(df_alpha, measure.var=c("Shannon","Observed","Chao1"),id.vars=c("Time_tx","Treatment","sample_ID","study_ID","Block","Cohort")) %>% mutate(Type="Virulence") %>% 
+  dplyr::rename(Index = variable)
+alpha_table$value = as.numeric(alpha_table$value)
+alpha_table$Treatment <- factor(alpha_table$Treatment, levels= c("Control","Antibiotic"))
+```
+
+Shannon diversity
+```{r}
+#Calculating p-values between treatments by time point
+stat.test <- alpha_table %>% 
+  filter(Index == "Shannon",sample_ID %notin% c("MA028.7")) %>% 
+  group_by(Time_tx) %>%
+  wilcox_test(value ~ Treatment, alternative = "less", paired = T) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p.adj") %>%
+  add_xy_position(x = "Time_tx", dodge = 0.8)
+stat.test
+
+#Boxplot of Shannon diversity between treatment groups over time
+shannon_vf = alpha_table %>% 
+  filter(Index == "Shannon") %>% 
+  ggboxplot(x = "Time_tx", y = "value", color = "Treatment", palette = "jama", fill = "Treatment", add = c("jitter"), notch = F, outlier.shape = NA,facet.by = "Type") +
+  labs(x = "Time to treatment", y = "Shannon index", colour = "Treatment", fill = "Treatment") + 
+  scale_fill_jama(alpha = 0.5) +
+  ylim(2.7,5.3)+
+  stat_pvalue_manual(stat.test,  label = "p", tip.length = 0) +  theme(axis.title.x = element_blank())
+
+shannon_vf
+```
+
+Observed diversity
+```{r}
+#Calculating p-values between treatments by time point
+stat.test <- alpha_table %>% 
+  filter(Index == "Observed",sample_ID %notin% c("MA028.7")) %>% 
+  group_by(Time_tx) %>%
+  wilcox_test(value ~ Treatment, alternative = "less", paired = T) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p.adj") %>%
+  add_xy_position(x = "Time_tx", dodge = 0.8)
+stat.test
+
+#Boxplot of Observed diversity between treatment groups over time
+Observed_vf = alpha_table %>% 
+  filter(Index == "Observed") %>% 
+  ggboxplot(x = "Time_tx", y = "value", color = "Treatment", palette = "jama", fill = "Treatment", add = c("jitter"), notch = F, outlier.shape = NA,facet.by = "Type") +
+  labs(x = "Time to treatment", y = "Observed", colour = "Treatment", fill = "Treatment") + 
+  scale_fill_jama(alpha = 0.5) +
+  ylim(25,280)+
+  stat_pvalue_manual(stat.test,  label = "p", tip.length = 0) +  theme(axis.title.x = element_blank())
+
+Observed_vf
+```
+
+## Beta diversity 
+Feature table used for beta diversity: Matrix with sequence_id as columns and features as rows
+```{r}
+library(tibble)
+feature_table <- merged %>% select(sequence_id,Template,normalized_abundance) %>% 
+  spread(sequence_id, normalized_abundance) %>% 
+  remove_rownames %>% column_to_rownames(var="Template") %>% 
+  as.matrix(rownames=TRUE)
+feature_table[is.na(feature_table)] <- 0
+```
+
+Phyloseq object with normalized values
+```{r}
+library("phyloseq")
+#import as phyloseq objects
+OTU = otu_table(feature_table,taxa_are_rows=TRUE)
+#(tree was already imported as a phyloseq object)
+physeq=phyloseq(OTU,TAX,META)
+```
+
+PERMANOVA
+```{r}
+library(microbial)
+beta <-betatest(physeq,group="Time_tx")
+beta
+```
+
+Bray-Curtis plot
+```{r fig.width=8}
+bray_virulence <- plotbeta(
+  physeq,
+  group="Time_tx",
+  shape = "Treatment",
+  distance = "bray",
+  method = "PCoA",
+  color = NULL,
+  size = 3,
+  ellipse = F) + 
+  labs(color = "Time", shape = "Treatment", fill="Time") + 
+  annotate("text", x = -0.1, y = 0.25, label = expression(paste("PERMANOVA, ",F ,"= 4.79, ",paste(italic('p')),"=0.001")), colour = "black", size = 4) + ggtitle("Virulence") +
+  stat_ellipse(geom = "polygon",
+               aes(fill = Time_tx, group=Time_tx), 
+               alpha = 0.1)+
+  scale_fill_aaas() +
+  scale_color_aaas()+
+  theme_bw()
+bray_virulence
+```
+
+VF diversity plot
+```{r fig.width = 10, fig.height= 3}
+alpha_vf <- ggarrange(shannon_vf, Observed_vf, common.legend = T, nrow = 1)
+div_vf <- ggarrange(alpha_vf, bray_virulence, nrow = 1, labels = c("B"))
+div_vf
+```

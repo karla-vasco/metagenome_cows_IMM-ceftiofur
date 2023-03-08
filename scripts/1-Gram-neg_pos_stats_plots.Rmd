@@ -1,0 +1,847 @@
+---
+title: "Quantification of Gram-negative and Gram-positive bacteria in cattle feces after ceftiofur intramammary application"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
+# Activating Libraries
+```{r}
+library(readxl)
+library(ggpubr)
+library(forcats)
+library(ggsci)
+library(dplyr)
+library(tibble)
+library(rstatix)
+
+# Function usex to filter data that does not contain an element or list of elements with dplyr
+`%notin%` <- Negate(`%in%`)
+```
+
+# Importing data
+```{r}
+setwd("/Users/karlavasco/Library/CloudStorage/OneDrive-MichiganStateUniversity/Manning_lab/Mastitis_project/metagenome_KV/tables/metadata/")
+data <- read_excel("IMM_ceftiofur_metadata.xlsx", sheet = "metadata")
+plate_counts <- read_excel("IMM_ceftiofur_metadata.xlsx", sheet = "plate_counts")
+temperature <- read_excel("IMM_ceftiofur_metadata.xlsx", sheet = "temperature")
+diet <- read_excel("IMM_ceftiofur_metadata.xlsx", sheet = "diet")
+
+plate_counts <- plate_counts %>% mutate_at(vars(matches(c('CFU.g','per'))), as.numeric)
+```
+
+# Merging tables for metadata
+```{r}
+metadata <- merge(data, diet) %>% 
+  merge(temperature) %>% 
+  merge(plate_counts) %>% 
+  mutate(
+    log10_GN = log10(GN_CFU.g),
+    log10_GN_Amp = log10(GN_Amp_CFU.g+1),
+    log10_GN_Cef = log10(GN_Cef_CFU.g+1),
+    log10_GP = log10(GP_CFU.g), 
+    log10_GP_Amp = log10(GP_Amp_CFU.g+1), 
+    log10_GP_Cef = log10(GP_Cef_CFU.g+1)
+    ) %>% 
+   mutate(Treatment = factor(Treatment, levels = c("Control", "Antibiotic")),
+          Time_tx = factor(Time_tx, levels = c("Day -1", "Week 1", "Week 2", "Week 3", "Week 5", "Week 7","Week 9")))
+```
+
+# Measures of central tendency
+All cows
+```{r}
+library(psych)
+metadata %>% select(matches(c('_CFU','_per',"log10"))) %>% 
+  describe()
+```
+Control group
+```{r}
+metadata %>% select(matches(c('_CFU.g','_per','log10')),Treatment) %>% 
+  dplyr::filter(Treatment == "Control") %>% 
+   psych::describe()
+```
+Antibiotic group
+```{r}
+metadata %>% select(matches(c('_CFU.g','_per','_FC')),Treatment) %>% 
+  dplyr::filter(Treatment == "Antibiotic") %>% 
+   psych::describe()
+```
+
+# Sum of GN resistant to ceftiofur counts (CFU/g) 
+Total sum by treatment groups and time points
+```{r}
+metadata %>% select(GN_Cef_CFU.g,Treatment, Time_tx) %>% 
+  group_by(Treatment, Time_tx) %>% 
+  dplyr::summarise(sum = sum(GN_Cef_CFU.g))
+```
+Comparison of total counts betweeen treatment groups in weeks 1 and 2
+```{r}
+c_d1 = 2502.09
+c_w1 = 483.16
+c_w2 = 287.69
+a_w1 = 3934.44
+a_w2 =6702.20
+a_d1= 3330.03
+
+# Fold change day -1 between antibiotic (a) and control (g) groups
+a_d1/c_d1
+
+# Fold change in week 1 between treatment groups
+a_w1/c_w1
+
+# Fold change in week 2 between treatment groups
+a_w2/c_w2
+
+# Fold change in weeks 1 and 2 between treatment groups
+(a_w1+a_w2)/(c_w1+c_w2)
+```
+
+# Total count of Gram-negative (GN) and Gram-positive (GP) bacteria
+
+## GN total count
+Comparison of GN total CFU/g between treatments overall the study
+```{r}
+metadata %>% 
+  dplyr::filter(sample_ID %notin% c("MA028.6","MA028.7")) %>% 
+  rstatix::wilcox_test(`GN_CFU.g` ~ Treatment, alternative = "greater", paired = T) %>%
+  rstatix::adjust_pvalue(method = "none") %>%
+  rstatix::add_significance("p.adj")
+```
+
+Significance total GN CFU/g over the time period overall
+```{r}
+metadata %>% 
+  dplyr::filter(study_ID %notin% c("MA029")) %>% 
+  friedman_test(log10_GN ~ Time_tx | study_ID) 
+```
+
+Significance total GN over the time period per group
+```{r}
+metadata %>% 
+  dplyr::filter(study_ID %notin% c("MA029")) %>% 
+  group_by(Treatment) %>% 
+  friedman_test(log10_GN ~ Time_tx | study_ID) 
+```
+
+Total Gram-negatives plot
+```{r fig.width=6, fig.height=4}
+stat.test <- metadata %>% 
+  dplyr::group_by(Time_tx) %>%
+  dplyr::filter(sample_ID %notin% c("MA028.6","MA028.7")) %>% 
+  rstatix::wilcox_test(log10_GN ~ Treatment, alternative = "greater", paired = T) %>%
+  rstatix::adjust_pvalue(method = "none") %>%
+  rstatix::add_significance("p.adj") %>% 
+  add_xy_position(x = "Time_tx", dodge = 0.8)
+stat.test
+
+#Plot with lines showing mean, standard deviation and p-values between groups
+GN_plot <- metadata %>% 
+  dplyr::filter(sample_ID %notin% c("MA028.6","MA028.7")) %>% 
+  ggline(x = "Time_tx", y = "log10_GN", 
+         color = "Treatment", palette = "jama",
+         add = c("mean_se"), 
+         ylab = "Total Gram-negative log10(CFU/g)", xlab = F) + 
+  geom_point(aes(color=Treatment), alpha=0.2, 
+             palette = "jama", 
+             position = position_jitterdodge()) +
+  stat_pvalue_manual(stat.test,  label = "p", tip.length = 0, bracket.size=0) +
+  annotate("text", x = 4, y = 11, 
+           label = expression(paste("Friedman test (FT), ", paste(italic('p'))," = 0.043"))) +
+  annotate("text", x = 3, y = 10.3, 
+           label = expression(paste("Control (FT), ", paste(italic('p'))," = 0.386")), 
+           color = "#374e55", size = 3.5) +
+  annotate("text", x = 5, y = 10.3, 
+           label = expression(paste("Antibiotic (FT), ", paste(italic('p'))," = 0.105")),            
+           color = "#df8f44", size = 3.5) +
+  geom_signif(mapping=aes(y = log10_GN, x = Time_tx), 
+              comparisons = list(c("Week 1","Week 2"),c("Week 7","Week 9")), 
+              test = "wilcox.test",  y_position = c(9,8),
+              color = "black", tip_length = 0.02, 
+              test.args=list(alternative = "less", var.equal = FALSE, paired=T)) +
+  geom_signif(data=dplyr::filter(metadata, Treatment == "Control"), 
+              mapping=aes(y = log10_GN, x = Time_tx), 
+              comparisons = list(c("Week 1","Week 2"),c("Week 7","Week 9")), 
+              test = "wilcox.test", y_position = c(8.5,7.5),
+              color = "#374e55", tip_length = 0.002,
+              test.args=list(alternative = "less", var.equal = FALSE, paired=T), 
+              textsize = 3.5) +
+  geom_signif(data=dplyr::filter(metadata, Treatment == "Antibiotic"), 
+              mapping=aes(y = log10_GN, x = Time_tx), 
+              comparisons = list(c("Week 1","Week 2"),c("Week 7","Week 9")), 
+              test = "wilcox.test",  y_position = c(8,7), 
+              color = "#df8f44", tip_length = 0.002, 
+              test.args=list(alternative = "less", var.equal = FALSE, paired=T), 
+              textsize = 3.5) 
+GN_plot
+```
+
+## GP total count
+
+Comparison of GP total CFU/g between treatments 
+```{r}
+metadata %>% 
+  dplyr::filter(`GP_CFU.g` %notin% NA) %>% 
+  rstatix::wilcox_test(`GP_CFU.g` ~ Treatment, alternative = "greater", paired = T) %>%
+  rstatix::adjust_pvalue(method = "none") %>%
+  rstatix::add_significance("p.adj")
+```
+
+Total Gram-positives plot
+```{r}
+stat.test <- metadata %>% 
+  dplyr::group_by(Time_tx) %>%
+  dplyr::filter(log10_GP %notin% NA, Time_tx %in% c("Day -1","Week 1")) %>% 
+  rstatix::wilcox_test(log10_GP ~ Treatment, alternative = "greater", paired = T) %>%
+  rstatix::adjust_pvalue(method = "none") %>%
+  rstatix::add_significance("p.adj") %>% 
+  add_xy_position(x = "Time_tx", dodge = 0.8)
+stat.test
+
+GPtotal_boxplot = metadata %>% 
+  dplyr::filter(log10_GP %notin% NA) %>%
+  ggboxplot(x = "Time_tx", y = "log10_GP", color = "Treatment", palette = "jama", 
+            fill = "Treatment", add = c("jitter"), notch = F, outlier.shape = NA) +
+  labs(x = "Time to treatment", y = "Total Gram-positive log10(CFU/g)") + 
+  scale_fill_jama(alpha = 0.5) + 
+  theme(legend.position="right") + 
+  stat_pvalue_manual(stat.test,  label = "p", tip.length = 0) +  
+  annotate("text", x = 1.5, y = 8, label = expression(paste("Friedman test, ", paste(italic('p'))," = 0.872"))) +
+  geom_signif(aes(y = log10_GP, x = Time_tx),
+              comparisons = list(c("Day -1","Week 1")), 
+              test = "wilcox.test", 
+              test.args=list(alternative = "less", var.equal = FALSE, paired=T), 
+              color = "black", tip_length = 0.02, y_position = c(7.5)) + 
+  theme(axis.title.x = element_blank()) + 
+  geom_signif(data = dplyr::filter(metadata, Treatment == "Control", `GP_CFU.g` %notin% NA, Time_tx %in% c("Day -1","Week 1")), 
+              mapping=aes(y = log10_GP, x = Time_tx), 
+              comparisons = list(c("Day -1","Week 1")), 
+              test = "wilcox.test", step_increase = 0.04, y_position = c(7.3), 
+              color = "#374e55", tip_length = 0.002, 
+              test.args=list(alternative = "less", var.equal = FALSE, paired=T),textsize = 3.5) +
+  geom_signif(data = dplyr::filter(metadata, Treatment == "Antibiotic", `GP_CFU.g` %notin% NA, Time_tx %in% c("Day -1","Week 1")),
+              mapping=aes(y = log10_GP, x = Time_tx), 
+              comparisons = list(c("Day -1","Week 1")),  
+              test = "wilcox.test", step_increase = 0.04, y_position = c(7.1), 
+              color = "#df8f44", tip_length = 0.002, 
+              test.args=list(alternative = "less", var.equal = FALSE, paired=T), textsize = 3.5)
+
+GPtotal_boxplot
+```
+
+# Linear-mixed effect model to explain variation in total GN 
+
+Metabolizable energy and protein in diet
+```{r}
+library(nlme)
+metadata <- metadata %>% dplyr::rename(ME =`ME (Mcal/lb)`, MP = `MP supply (g)`, DM = `DM Fed lbs`)
+lm.test <- lme(GN_CFU.g ~ days_tx*temperature_Celsius+DM+ME+MP+collection_date+Treatment, random=~1|study_ID, data = metadata)
+summary(lm.test)
+anova(lm.test)
+```
+Grain and forage in diet ration
+```{r}
+library(nlme)
+lm.test <- lme(GN_CFU.g ~Grain+Forage+days_tx*temperature_Celsius, random=~1|study_ID, data = metadata)
+summary(lm.test)
+anova(lm.test)
+```
+
+# Comparison prevalence of resistant bacteria between treatments
+
+Gram-negative ceftiofur resistant between treatments
+```{r}
+antibiotic_GN <- metadata %>% filter(Treatment %in% "Antibiotic")
+control_GN <- metadata %>% filter(Treatment %in% "Control", sample_ID %notin% c("MA028.6","MA028.7"))
+
+prevalence_GNamp <-sum(ifelse(metadata$GN_Amp_CFU.g>0,1,0))*100/length(ifelse(metadata$GN_Amp_CFU.g>0,1,0))
+prevalence_GNcef <-sum(ifelse(metadata$GN_Cef_CFU.g>0,1,0))*100/length(ifelse(metadata$GN_Cef_CFU.g>0,1,0))
+
+prevalence_GNcef_antibiotic <- ifelse(antibiotic_GN$GN_Cef_CFU.g>0,1,0)
+prevalence_GNcef_antibiotic[is.na(prevalence_GNcef_antibiotic)] = 0
+prevalence_GNcef_control <- ifelse(control_GN$GN_Cef_CFU.g>0,1,0)
+prevalence_GNcef_control[is.na(prevalence_GNcef_control)] = 0
+
+wilcox.test(prevalence_GNcef_antibiotic, prevalence_GNcef_control, paired = T)
+```
+Gram-negative ampicillin resistant between treatments
+```{r}
+prevalence_GNamp_antibiotic <- ifelse(antibiotic_GN$GN_Amp_per>0,1,0)
+prevalence_GNamp_antibiotic[is.na(prevalence_GNamp_antibiotic)] = 0
+
+prevalence_GNamp_control <- ifelse(control_GN$GN_Amp_per>0,1,0)
+prevalence_GNamp_control[is.na(prevalence_GNamp_control)] = 0
+
+wilcox.test(prevalence_GNamp_antibiotic, prevalence_GNamp_control, paired = T)
+```
+
+
+# Comparison percentage of Gram-positive resistant to ceftiofur vs. ampicillin within samples
+```{r}
+wilcox.test(metadata$GP_Cef_per, metadata$GP_Amp_per, paired = T)
+```
+
+# Comparison percentage of Gram-negative resistant to ceftiofur vs. ampicillin within samples
+```{r}
+wilcox.test(metadata$GN_Amp_per, metadata$GN_Cef_per, paired = T)
+```
+
+# Proportion of GN and GP resistant to Ampicillin and Ceftiofur
+
+## GN resistant to Ampicillin %
+```{r}
+# Variation over time
+metadata %>% 
+  dplyr::filter(study_ID %notin% c("MA029")) %>%
+  dplyr::group_by(Treatment) %>% 
+  friedman_test(GN_Amp_per ~ Time_tx | study_ID) 
+```
+
+Significance over the time period (regardless of treatment)
+```{r}
+metadata %>% 
+  dplyr::filter(study_ID %notin% c("MA029")) %>%
+  friedman_test(GN_Amp_per ~ Time_tx | study_ID) 
+```
+Ampicillin Gram-negatives % plot
+```{r}
+stat.test <- metadata %>% 
+  filter(sample_ID %notin% c("MA028.6","MA028.7")) %>% 
+  dplyr::group_by(Time_tx) %>%
+  rstatix::wilcox_test(`GN_Amp_per` ~ Treatment, alternative = "less", paired = T) %>%
+  rstatix::adjust_pvalue(method = "none") %>%
+  rstatix::add_significance("p.adj") %>% 
+  add_xy_position(x = "Time_tx", dodge = 0.8, fun = "mean_se")
+stat.test
+
+#Plot with lines showing mean, standard deviation and p-values between groups
+Ampicillin_line_se_per <- metadata %>% 
+  ggline(x = "Time_tx", y = "GN_Amp_per", 
+         color = "Treatment", add = c("mean_se"), 
+         ylab = "Ampicillin(R) Gram-negative %", 
+         xlab = "Time to treatment", 
+         palette = "jama") + 
+  geom_point(aes(color=Treatment), alpha=0.2, palette = "jama", 
+             position = position_jitterdodge()) +
+  scale_y_continuous(labels = function(x) format(x, scientific = TRUE)) + 
+  theme(axis.title.x = element_blank()) +
+  stat_pvalue_manual(stat.test,  label = "p", tip.length = 0, bracket.size=0) +
+  annotate("text", x = 4, y = 1e+02, label = expression(paste("Friedman test, ", paste(italic('p'))," = 0.001"))) +
+  annotate("text", x = 3, y = .92e+02, label = expression(paste("Control (FT), ", paste(italic('p'))," = 0.008")), 
+           color = "#374e55", size = 3.5) +
+  annotate("text", x = 5, y = .92e+02, label = expression(paste("Antibiotic (FT), ", paste(italic('p'))," = 0.258")), 
+           color = "#df8f44", size = 3.5) + 
+  geom_signif(mapping=aes(y = `GN_Amp_per`, x = Time_tx), 
+              comparisons = list(c("Day -1","Week 2"), c("Week 7","Week 9")), 
+              test = "wilcox.test", step_increase = 0.04, margin_top = -.3, 
+              color = "black", tip_length = 0.01,
+              test.args=list(alternative = "less", paired=T)) + 
+  geom_signif(data=dplyr::filter(metadata, Treatment == "Control"), 
+              mapping=aes(y = GN_Amp_per, x = Time_tx), 
+              comparisons = list(c("Day -1","Week 2"), c("Week 7","Week 9")), 
+              test = "wilcox.test", step_increase = 0.022, margin_top = -0.5, 
+              color = "#374e55", tip_length = 0.002, 
+              test.args=list(alternative = "less", var.equal = FALSE, paired=T), textsize = 3.5) +
+  geom_signif(data=dplyr::filter(metadata, Treatment == "Antibiotic"), 
+              mapping=aes(y = GN_Amp_per, x = Time_tx), 
+              comparisons = list(c("Day -1","Week 2"), c("Week 7","Week 9")), 
+              test = "wilcox.test", step_increase = 0.022, margin_top = -0.4, 
+              color = "#df8f44", tip_length = 0.002, 
+              test.args=list(alternative = "less", var.equal = FALSE, paired=T), textsize = 3.5) 
+
+#Final plot
+Ampicillin_line_se_per
+```
+
+## GP resistant to Ampicillin %
+```{r}
+metadata %>% 
+  dplyr::filter(GP_Amp_per %notin% NA) %>%
+  mutate(Time_tx = factor(Time_tx, levels = c("Day -1", "Week 1"))) %>% 
+  friedman_test(GP_Amp_per ~ Time_tx | study_ID)
+```
+
+GP Ampicillin resistant % plot
+```{r}
+stat.test <- metadata %>% 
+  dplyr::filter(`GP_Amp_per` %notin% NA) %>%
+  dplyr::group_by(Time_tx) %>%
+  rstatix::wilcox_test(`GP_Amp_per` ~ Treatment, alternative = "less", paired = T) %>%
+    rstatix::adjust_pvalue(method = "none") %>%
+  rstatix::add_significance("p") %>%
+  add_xy_position(x = "Time_tx", dodge = 0.8)
+stat.test
+
+GPamp_boxplot_per = metadata %>% 
+  dplyr::filter(`GP_Amp_per` %notin% NA) %>%
+  dplyr::filter(study_ID %notin% "MA027") %>%
+  ggboxplot(x = "Time_tx", y = "GP_Amp_per", 
+            color = "Treatment", fill = "Treatment", palette = "jama", alpha = 0.5, 
+            add = c("jitter"), notch = F, outlier.shape = NA, 
+            ylab =  "Ampicillin(R) Gram-positive %", xlab = F, 
+            legend = "top") +
+  scale_y_continuous(labels = function(x) format(x, scientific = TRUE)) + 
+  stat_pvalue_manual(stat.test,  label = "p", tip.length = 0) +  
+  annotate("text", x = 1.5, y = 55, 
+           label = expression(paste("Friedman test, ", paste(italic('p'))," = 1.0"))) +
+  geom_signif(aes(y = `GP_Amp_per`, x = Time_tx),
+              comparisons = list(c("Day -1","Week 1")), 
+              test = "wilcox.test", 
+              test.args=list(alternative = "less", var.equal = FALSE, paired=T), 
+              color = "black", tip_length = 0.02, y_position = c(45)) +
+  geom_signif(data = dplyr::filter(metadata, Treatment == "Control", 
+                                     `GP_CFU.g` %notin% NA, 
+                                     Time_tx %in% c("Day -1","Week 1")),
+      mapping=aes(y = GP_Amp_per, x = Time_tx), 
+      comparisons = list(c("Day -1","Week 1")),
+      test = "wilcox.test", step_increase = 0.04, y_position = c(41), 
+      color = "#374e55", tip_length = 0.002, 
+      test.args=list(alternative = "less", var.equal = FALSE, paired=T),textsize = 3.5) +
+    geom_signif(data = dplyr::filter(metadata, Treatment == "Antibiotic", 
+                                     `GP_CFU.g` %notin% NA, 
+                                     Time_tx %in% c("Day -1","Week 1")), 
+                mapping=aes(y = GP_Amp_per, x = Time_tx), 
+                comparisons = list(c("Day -1","Week 1")),  
+                test = "wilcox.test", step_increase = 0.04, y_position = c(37), 
+                color = "#df8f44", tip_length = 0.002, 
+                test.args=list(alternative = "less", var.equal = FALSE, paired=T), textsize = 3.5)
+
+GPamp_boxplot_per
+```
+
+
+## GN resistant to Ceftiofur %
+```{r}
+# Variation over time
+metadata %>% 
+  dplyr::filter(study_ID %notin% c("MA029")) %>%
+  dplyr::group_by(Treatment) %>% 
+  friedman_test(GN_Cef_per ~ Time_tx | study_ID) 
+```
+
+Significance over the time period (regardless of treatment)
+```{r}
+metadata %>% 
+  dplyr::filter(study_ID %notin% c("MA029")) %>%
+  friedman_test(GN_Cef_per ~ Time_tx | study_ID) 
+```
+
+Ceftiofur Gram-negatives % plot
+```{r echo=FALSE}
+stat.test <- metadata %>% 
+  filter(sample_ID %notin% c("MA028.6","MA028.7")) %>% 
+  dplyr::group_by(Time_tx) %>%
+  rstatix::wilcox_test(GN_Cef_per ~ Treatment, alternative = "less", paired = T) %>%
+ rstatix::adjust_pvalue(method = "none") %>%
+  rstatix::add_significance("p.adj") %>% 
+  add_xy_position(x = "Time_tx", dodge = 0.8, fun = "mean_se")
+stat.test
+
+Ceftiofur_line_se_per <- metadata %>% 
+  ggline(x = "Time_tx", y = "GN_Cef_per", 
+         color = "Treatment", add = c("mean_se"), 
+         ylab = "Ceftiofur(R) Gram-negative %", 
+         xlab = F, 
+         palette = "jama") + 
+  geom_point(aes(color=Treatment), alpha=0.2, palette = "jama", 
+             position = position_jitterdodge()) +
+  scale_y_continuous(labels = function(x) format(x, scientific = TRUE)) + 
+  stat_pvalue_manual(stat.test,  label = "p", tip.length = 0, bracket.size=0) +
+  annotate("text", x = 4, y = 1, label = expression(paste("Friedman test, ", paste(italic('p'))," = 0.0015"))) +
+  annotate("text", x = 3, y = .9, label = expression(paste("Control (FT), ", paste(italic('p'))," = 0.075")), 
+           color = "#374e55", size = 3.5) +
+  annotate("text", x = 5, y = .9, label = expression(paste("Antibiotic (FT), ", paste(italic('p'))," = 0.062")), 
+           color = "#df8f44", size = 3.5) + 
+  geom_signif(mapping=aes(y = `GN_Cef_per`, x = Time_tx), 
+              comparisons = list(c("Week 5","Week 7"), c("Week 7","Week 9")), 
+              test = "wilcox.test", step_increase = 0.04, margin_top = -.3, 
+              color = "black", tip_length = 0.01,
+              test.args=list(alternative = "less", paired=F)) + 
+  geom_signif(data=dplyr::filter(metadata, Treatment == "Control"), 
+              mapping=aes(y = GN_Cef_per, x = Time_tx), 
+              comparisons = list(c("Week 5","Week 7"), c("Week 7","Week 9")), 
+              test = "wilcox.test", step_increase = 0.04, margin_top = -0.5, 
+              color = "#374e55", tip_length = 0.002, 
+              test.args=list(alternative = "less", var.equal = FALSE, paired=T), textsize = 3.5) +
+  geom_signif(data=dplyr::filter(metadata, Treatment == "Antibiotic", study_ID %notin% "MA029"), 
+              mapping=aes(y = GN_Cef_per, x = Time_tx), 
+              comparisons = list(c("Week 5","Week 7"), c("Week 7","Week 9")), 
+              test = "wilcox.test", step_increase = 0.04, margin_top = -0.4, 
+              color = "#df8f44", tip_length = 0.002, 
+              test.args=list(alternative = "less", var.equal = FALSE, paired=T), textsize = 3.5) 
+
+#Final plot
+Ceftiofur_line_se_per
+```
+
+
+## GP resistant to Ceftiofur %
+
+Variation over time by treatment group
+```{r}
+metadata %>% 
+  dplyr::filter(`GP_Cef_per` %notin% NA) %>%
+  group_by(Treatment) %>% 
+  friedman_test(`GP_Cef_per` ~ Time_tx | study_ID) 
+```
+
+Variation over time all animals
+```{r}
+metadata %>% 
+  dplyr::filter(`GP_Cef_per` %notin% NA) %>%
+  mutate(Time_tx = factor(Time_tx, levels = c("Day -1", "Week 1"))) %>% 
+  friedman_test(`GP_Cef_per` ~ Time_tx | study_ID) 
+```
+
+GP Ceftiofur resistant % plot
+```{r}
+stat.test <- metadata %>% 
+  dplyr::filter(`GP_Cef_per` %notin% NA) %>%
+  dplyr::group_by(Time_tx) %>%
+  rstatix::wilcox_test(`GP_Cef_per` ~ Treatment, alternative = "less", paired = T) %>%
+  rstatix::adjust_pvalue(method = "none") %>%
+  rstatix::add_significance("p") %>%
+  add_xy_position(x = "Time_tx", dodge = 0.8)
+stat.test
+
+GPcef_boxplot_per = metadata %>% 
+  dplyr::filter(`GP_Cef_per` %notin% NA) %>%
+  dplyr::filter(study_ID %notin% "MA027") %>%
+  ggboxplot(x = "Time_tx", y = "GP_Cef_per", color = "Treatment", palette = "jama", 
+            fill = "Treatment", add = c("jitter"), notch = F, outlier.shape = NA) +
+  labs(x = "Time to treatment", y = "Ceftiofur(R) Gram-positive %") + 
+  scale_fill_jama(alpha = 0.5) + 
+  theme(legend.position="right") + 
+  stat_pvalue_manual(stat.test,  label = "p", tip.length = 0) +  
+  annotate("text", x = 1.5, y = 130, 
+           label = expression(paste("Friedman test, ", paste(italic('p'))," = 0.343"))) +
+  geom_signif(aes(y = `GP_Cef_per`, x = Time_tx),
+              comparisons = list(c("Day -1","Week 1")), 
+              test = "wilcox.test", 
+              test.args=list(alternative = "less", var.equal = FALSE, paired=T), 
+              color = "black", tip_length = 0.02, y_position = 110) +
+  theme(axis.title.x = element_blank()) + 
+  geom_signif(data = dplyr::filter(metadata, Treatment == "Control",`GP_CFU.g` %notin% NA),
+               mapping=aes(y = GP_Cef_per, x = Time_tx), 
+              comparisons = list(c("Day -1","Week 1")), 
+              test = "wilcox.test", step_increase = 0.04, y_position = c(100), 
+              color = "#374e55", tip_length = 0.002, 
+              test.args=list(alternative = "less", var.equal = FALSE, paired=T),textsize = 3.5) +
+  geom_signif(data = dplyr::filter(metadata, Treatment == "Antibiotic", `GP_CFU.g` %notin% NA),
+              mapping=aes(y = GP_Cef_per, x = Time_tx), 
+              comparisons = list(c("Day -1","Week 1")),  
+              test = "wilcox.test", step_increase = 0.04, y_position = c(90), 
+              color = "#df8f44", tip_length = 0.002, 
+              test.args=list(alternative = "less", var.equal = FALSE, paired=T), textsize = 3.5)
+
+GPcef_boxplot_per
+```
+
+# Number of resistant GN and GP (log 10)
+
+## GN resistant to Ampicillin
+Significance over the time period per group
+```{r}
+metadata %>% 
+  dplyr::filter(study_ID %notin% c("MA029")) %>%
+  group_by(Treatment) %>% 
+  friedman_test(`GN_Amp_CFU.g` ~ Time_tx | study_ID) 
+```
+
+Significance over the time period (regardless of treatment)
+```{r}
+metadata %>% 
+  dplyr::filter(study_ID %notin% c("MA029")) %>%
+  friedman_test(`GN_Amp_CFU.g` ~ Time_tx | study_ID) 
+```
+
+GN Ampicillin plot
+```{r}
+stat.test <- metadata %>% 
+  dplyr::filter(sample_ID %notin% c("MA028.6","MA028.7")) %>% 
+  dplyr::group_by(Time_tx) %>%
+  rstatix::wilcox_test(log10_GN_Amp ~ Treatment, alternative = "less", paired = T) %>%
+  rstatix::adjust_pvalue(method = "none") %>%
+  rstatix::add_significance("p.adj") %>% 
+  add_xy_position(x = "Time_tx", dodge = 0.8)
+stat.test
+
+#Plot with lines showing mean, standard deviation and p-values between groups
+Ampicillin_line_se <- metadata %>% 
+  ggline(x = "Time_tx", y = "log10_GN_Amp", 
+         color = "Treatment", palette = "jama",
+         add = c("mean_se"), 
+         ylab = "Ampicillin(R) Gram-negative log10(CFU/g)", 
+         xlab = F) + 
+  geom_point(aes(color=Treatment), alpha=0.2, palette = "jama", position = position_jitterdodge()) +
+  stat_pvalue_manual(stat.test,  label = "p", tip.length = 0, bracket.size=0) +
+  annotate("text", x = 4, y = 11, label = expression(paste("Friedman test, ", paste(italic('p'))," = 8.057e-05"))) +
+  annotate("text", x = 3, y = 10.3, label = expression(paste("Control (FT), ", paste(italic('p'))," = 0.003")), 
+           color = "#374e55", size = 3.5) +
+  annotate("text", x = 5, y = 10.3, label = expression(paste("Antibiotic (FT), ", paste(italic('p'))," = 0.101")), 
+           color = "#df8f44", size = 3.5) + 
+  geom_signif(mapping=aes(y = log10_GN_Amp, x = Time_tx), 
+              comparisons = list(c("Day -1","Week 1"), c("Week 7","Week 9")), 
+              test = "wilcox.test", y_position = c(9,9), color = "black", tip_length = 0.01, 
+              test.args=list(alternative = "less", var.equal = FALSE, paired=T)) + 
+  geom_signif(data=dplyr::filter(metadata, Treatment == "Control"), 
+              mapping=aes(y = log10_GN_Amp, x = Time_tx), 
+              comparisons = list(c("Day -1","Week 1"), c("Week 7","Week 9")), 
+              test = "wilcox.test", y_position = c(8.3,8.3),
+              color = "#374e55", tip_length = 0.002, 
+              test.args=list(alternative = "less", var.equal = FALSE, paired=T), textsize = 3.5) +
+  geom_signif(data=dplyr::filter(metadata, Treatment == "Antibiotic", study_ID %notin% "MA029"), 
+              mapping=aes(y = log10_GN_Amp, x = Time_tx), 
+              comparisons = list(c("Day -1","Week 1"), c("Week 7","Week 9")), 
+              test = "wilcox.test", y_position = c(7.6,7.6), color = "#df8f44", tip_length = 0.002, 
+              test.args=list(alternative = "less", var.equal = FALSE, paired=T), textsize = 3.5)
+
+#Final plot
+Ampicillin_line_se
+```
+
+## GP resistant to Ampicillin
+
+Variation over time all animals
+```{r}
+metadata %>% 
+  dplyr::filter(log10_GP_Amp %notin% NA) %>%
+  mutate(Time_tx = factor(Time_tx, levels = c("Day -1", "Week 1"))) %>% 
+  rstatix::friedman_test(log10_GP_Amp ~ Time_tx | study_ID) 
+```
+
+GP resistant to Ampicillin (Log 10) plot
+```{r}
+stat.test <- metadata %>% 
+  dplyr::filter(log10_GP_Amp %notin% NA, Time_tx %in% c("Day -1", "Week 1")) %>%
+  dplyr::group_by(Time_tx) %>%
+  rstatix::wilcox_test(log10_GP_Amp ~ Treatment, alternative = "less", paired = T) %>%
+  rstatix::adjust_pvalue(method = "none") %>%
+  rstatix::add_significance("p") %>%
+  add_xy_position(x = "Time_tx", dodge = 0.8)
+stat.test
+
+GPamp_boxplot = metadata %>% 
+  dplyr::filter(`GP_Amp_CFU.g` %notin% NA) %>%
+  ggboxplot(x = "Time_tx", y = "log10_GP_Amp", 
+            color = "Treatment", palette = "jama", fill = "Treatment", alpha =0.5,
+            add = c("jitter"), notch = F, outlier.shape = NA,
+            xlab = F, ylab = "Ampicillin(R) Gram-positive log10(CFU/g)",
+            legend = "top") +
+  stat_pvalue_manual(stat.test, label = "p", tip.length = 0) +  
+  annotate("text", x = 1.5, y = 6.8, 
+           label = expression(paste("Friedman test, ", paste(italic('p'))," = 0.752"))) +
+  geom_signif(aes(y = log10_GP_Amp, x = Time_tx),
+              comparisons = list(c("Day -1","Week 1")), 
+              test = "wilcox.test", 
+              test.args=list(alternative = "less", var.equal = FALSE, paired=T), 
+              color = "black", tip_length = 0.02, y_position = c(6.1)) +
+  geom_signif(data = dplyr::filter(metadata, Treatment == "Control", 
+                                     `GP_CFU.g` %notin% NA),
+              mapping=aes(y = log10_GP_Amp, x = Time_tx), 
+              comparisons = list(c("Day -1","Week 1")), 
+              test = "wilcox.test", step_increase = 0.04, 
+              y_position = c(5.8), color = "#374e55", tip_length = 0.002, 
+              test.args=list(alternative = "less", var.equal = FALSE, paired=T),textsize = 3.5) + 
+  geom_signif(data = dplyr::filter(metadata, Treatment == "Antibiotic", 
+                                     `GP_CFU.g` %notin% NA),
+              mapping=aes(y = log10_GP_Amp, x = Time_tx), 
+              comparisons = list(c("Day -1","Week 1")),  
+              test = "wilcox.test", step_increase = 0.04, 
+              y_position = c(5.5), color = "#df8f44", tip_length = 0.002, 
+              test.args=list(alternative = "less", var.equal = FALSE, paired=T), textsize = 3.5)
+
+GPamp_boxplot
+```
+
+
+## GN resistant to Ceftiofur
+Significance over the time period per group
+```{r}
+metadata %>% 
+  dplyr::filter(study_ID %notin% c("MA029")) %>%
+  group_by(Treatment) %>% 
+  friedman_test(log10_GN_Cef ~ Time_tx | study_ID) 
+```
+
+Significance over the time period (regardless of treatment)
+```{r}
+metadata %>% 
+  dplyr::filter(study_ID %notin% c("MA029")) %>%
+  friedman_test(log10_GN_Cef ~ Time_tx | study_ID) 
+```
+
+Ceftiofur resistant GN plot
+```{r}
+stat.test <- metadata %>% 
+  dplyr::filter(sample_ID %notin% c("MA028.6","MA028.7")) %>%
+  dplyr::group_by(Time_tx) %>%
+  rstatix::wilcox_test(log10_GN_Cef ~ Treatment, alternative = "less", paired = T) %>%
+  rstatix::adjust_pvalue(method = "none") %>%
+  rstatix::add_significance("p.adj") %>% 
+  add_xy_position(x = "Time_tx", dodge = 0.8, fun = "mean_sd")
+stat.test
+
+Ceftiofur_line_se <- metadata %>% 
+  ggline(x = "Time_tx", y = "log10_GN_Cef", 
+         color = "Treatment", add = c("mean_se"), palette = "jama",
+         ylab = "Ceftiofur(R) Gram-negative log10(CFU/g)", xlab = F) + 
+  geom_point(aes(color=Treatment), alpha=0.2, palette = "jama", position = position_jitterdodge()) +
+  stat_pvalue_manual(stat.test,  label = "p", tip.length = 0, bracket.size=0) +
+  annotate("text", x = 4, y = 5, 
+           label = expression(paste("Friedman test, ", paste(italic('p'))," = 0.002"))) +
+  annotate("text", x = 3, y = 4.6, 
+           label = expression(paste("Control (FT), ", paste(italic('p'))," = 0.093")), 
+           color = "#374e55", size = 3.5) +
+  annotate("text", x = 5, y = 4.6, 
+           label = expression(paste("Antibiotic (FT), ", paste(italic('p'))," = 0.087")), 
+           color = "#df8f44", size = 3.5) + 
+  geom_signif(mapping=aes(y = log10_GN_Cef, x = Time_tx), 
+              comparisons = list(c("Week 5","Week 7"), c("Week 7","Week 9")), 
+              test = "wilcox.test", y_position = c(3,4), 
+              color = "black", tip_length = 0.01,
+              test.args=list(alternative = "less", paired=F)) + 
+  geom_signif(data=dplyr::filter(metadata, Treatment == "Control", 
+                                 study_ID %notin% c("MA029")),
+              mapping=aes(y = log10_GN_Cef, x = Time_tx), 
+              comparisons = list(c("Week 5","Week 7"), c("Week 7","Week 9")), 
+              test = "wilcox.test",  y_position = c(2.7,3.7),  
+              color = "#374e55", tip_length = 0.002, 
+              test.args=list(alternative = "less", var.equal = FALSE, paired=T), textsize = 3.5)  + 
+  geom_signif(data=dplyr::filter(metadata, Treatment == "Antibiotic", study_ID %notin% "MA029"), 
+              mapping=aes(y = log10_GN_Cef, x = Time_tx), 
+              comparisons = list(c("Week 5","Week 7"), c("Week 7","Week 9")), 
+              test = "wilcox.test",  y_position = c(2.4,3.4), 
+              color = "#df8f44", tip_length = 0.002, 
+              test.args=list(alternative = "less", var.equal = FALSE, paired=T), textsize = 3.5) 
+
+#Final plot
+Ceftiofur_line_se
+```
+
+
+## GP resistant to Ceftiofur
+Variation over time all animals
+```{r}
+metadata %>% 
+  dplyr::filter(log10_GP_Cef %notin% NA) %>%
+  mutate(Time_tx = factor(Time_tx, levels = c("Day -1", "Week 1"))) %>% 
+  friedman_test(log10_GP_Cef ~ Time_tx | study_ID) 
+```
+
+GP resistant to ceftiofur plot
+```{r}
+stat.test <- metadata %>% 
+  dplyr::filter(log10_GP_Cef %notin% NA) %>%
+  dplyr::filter(study_ID %notin% "MA027") %>%
+  dplyr::filter(Time_tx %in% c("Day -1", "Week 1")) %>%
+  dplyr::group_by(Time_tx) %>%
+  rstatix::wilcox_test(log10_GP_Cef ~ Treatment, alternative = "greater", paired = T) %>%
+    rstatix::adjust_pvalue(method = "none") %>%
+  rstatix::add_significance("p") %>%
+  add_xy_position(x = "Time_tx", dodge = 0.8)
+stat.test
+
+GPcef_boxplot = metadata %>% 
+  dplyr::filter(log10_GP_Cef %notin% NA) %>%
+  dplyr::filter(study_ID %notin% "MA027") %>%
+  ggboxplot(x = "Time_tx", y = "log10_GP_Cef", 
+            color = "Treatment", palette = "jama", alpha = 0.5,
+            fill = "Treatment", add = c("jitter"), 
+            notch = F, outlier.shape = NA,
+            xlab = F, ylab = "Ceftiofur(R) Gram-positive log10(CFU/g)", 
+            legend = "top") +
+  stat_pvalue_manual(stat.test,  label = "p", tip.length = 0) +  
+  annotate("text", x = 1.5, y = 6.65, 
+           label = expression(paste("Friedman test, ", paste(italic('p'))," = 0.631"))) +
+  geom_signif(aes(y = log10_GP_Cef, x = Time_tx),
+              comparisons = list(c("Day -1","Week 1")), 
+              test = "wilcox.test", 
+              test.args=list(alternative = "less", var.equal = FALSE, paired=T), 
+              color = "black", tip_length = 0.02, y_position = c(6.3)) + 
+  geom_signif(data = dplyr::filter(metadata, Treatment == "Control", 
+                                     log10_GP_Cef %notin% NA),
+              mapping=aes(y = log10_GP_Cef, x = Time_tx), 
+              comparisons = list(c("Day -1","Week 1")), 
+              test = "wilcox.test", step_increase = 0.04, y_position = c(6.1), 
+              color = "#374e55", tip_length = 0.002, 
+              test.args=list(alternative = "less", var.equal = FALSE, paired=T),textsize = 3.5) +
+  geom_signif(data = dplyr::filter(metadata, Treatment == "Antibiotic", 
+                                     log10_GP_Cef %notin% NA),
+              mapping=aes(y = log10_GP_Cef, x = Time_tx), 
+              comparisons = list(c("Day -1","Week 1")),  
+              test = "wilcox.test", step_increase = 0.04, y_position = c(5.95), 
+              color = "#df8f44", tip_length = 0.002, 
+              test.args=list(alternative = "less", var.equal = FALSE, paired=T), textsize = 3.5)
+
+GPcef_boxplot
+```
+
+
+# Merging plots 
+
+GP and GN Log10 
+```{r fig.height=12, fig.width=10}
+figure3 <- ggarrange(GN_plot, GPtotal_boxplot, Ceftiofur_line_se, GPcef_boxplot,Ampicillin_line_se, GPamp_boxplot,
+          common.legend = T, 
+          labels = c("A","B","C","D","E","F"),
+          nrow = 3, ncol = 2,
+          widths = c(2,1,2,1,2,1)
+          )
+figure3
+```
+
+GN and GP percentages
+```{r fig.height=8, fig.width=10}
+figureS1 <- ggarrange(Ceftiofur_line_se_per, GPcef_boxplot_per, Ampicillin_line_se_per, GPamp_boxplot_per,
+          common.legend = T, 
+          labels = c("A","B","C","D"),
+          nrow = 2, ncol = 2,
+          widths = c(2,1,2,1)
+          )
+figureS1
+```
+
+Saving plots
+```{r}
+setwd("/Users/karlavasco/Library/CloudStorage/OneDrive-MichiganStateUniversity/Manning_lab/Mastitis_project/metagenome_KV/figures")
+ggsave(plot = figure3, "Fig3_GN_GP_log10_counts.png", height=12,width = 10)
+ggsave(plot = figureS1, "FigS1_GN_GP_resistant_percentage.png", height=8,width = 10)
+```
+
+# Ceftiofur resistant isolates
+Importing table
+```{r}
+#Import tables
+setwd("/Users/karlavasco/Library/CloudStorage/OneDrive-MichiganStateUniversity/Manning_lab/Mastitis_project/metagenome_KV/tables/metadata/")
+cef_strains <- read_excel("IMM_ceftiofur_metadata.xlsx", sheet = "ceftiofur_resistant_isolates") %>% 
+  merge(data, by = "sample_ID")
+cef_strains$Treatment <- factor(cef_strains$Treatment, levels = c("Control", "Antibiotic"))
+```
+
+Number of isolates per treatment
+```{r}
+cef_strains %>% 
+  dplyr::group_by(Treatment) %>%
+  dplyr::summarise(total_isolates=length(Strain_ID))
+```
+
+Plot showing the number of isolates per sampling point and treatment group
+```{r}
+cef_strains$Time_tx <- factor(cef_strains$Time_tx, levels = c("Day -1", "Week 1", "Week 2", "Week 3", "Week 5", "Week 7", "Week 9", "Week 11"))
+
+cef_strains_number <-cef_strains %>% 
+  dplyr::group_by(Time_tx, Treatment) %>%
+  dplyr::summarise(total_isolates=length(Strain_ID)) %>% 
+  ggbarplot(x = "Time_tx", y = "total_isolates", 
+            color = "Treatment", fill="Treatment", alpha = 0.7, palette = "jama",
+            lab.pos = "in", label = T, lab.col = "black", 
+            ylab = "Number of isolates", 
+            xlab = F
+            ) 
+cef_strains_number
+```

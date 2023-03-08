@@ -1,0 +1,354 @@
+---
+title: "Metagenomic sequencing metrics"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
+# Activating Libraries
+```{r error=FALSE}
+library(readxl)
+library(ggpubr)
+library(ggsci)
+library(dplyr)
+library(rstatix)
+
+# Function use to filter data that do not contain an element or list of elements with dplyr
+`%notin%` <- Negate(`%in%`)
+```
+
+# Importing data
+```{r}
+setwd("/Users/karlavasco/Library/CloudStorage/OneDrive-MichiganStateUniversity/Manning_lab/Mastitis_project/metagenome_KV/tables/metadata/")
+data <- read_excel("IMM_ceftiofur_metadata.xlsx", sheet = "metadata")
+metagenome_stats <- read_excel("IMM_ceftiofur_metadata.xlsx", sheet = "metagenome_stats")
+temperature <- read_excel("IMM_ceftiofur_metadata.xlsx", sheet = "temperature")
+diet <- read_excel("IMM_ceftiofur_metadata.xlsx", sheet = "diet")
+#plate_counts <- plate_counts %>% mutate_at(vars(matches(c('CFU.g','per'))), as.numeric)
+```
+
+
+# Merging tables for metadata
+```{r}
+metadata <- merge(data, diet) %>% 
+  merge(temperature) %>% 
+  merge(metagenome_stats) %>% 
+  mutate(Treatment = factor(Treatment, levels = c("Control", "Antibiotic")),
+          Time_tx = factor(Time_tx, levels = c("Day -1", "Week 1", "Week 5", "Week 9")))
+```
+
+# General stats
+
+## Measures of central tendency
+All cows
+```{r error=FALSE}
+library(psych)
+metadata %>% select(reads_raw:bacterial_reads_16S) %>% 
+   psych::describe() %>% 
+  print(digits=3)
+```
+
+## Non-parametric comparisons between treatments
+Comparison number of raw reads between treatment groups
+```{r}
+metadata %>% 
+  filter(sample_ID %notin% "MA028.7") %>% 
+  wilcox_test(reads_raw ~ Treatment, alternative = "greater", paired = T) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p.adj") 
+```
+Comparison number of reads quality trimmed and without host, between treatment groups
+```{r}
+metadata %>% 
+  filter(sample_ID %notin% "MA028.7") %>% 
+  wilcox_test(reads_nonhost ~ Treatment, alternative = "greater", paired = T) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p.adj") 
+```
+Comparison number of genome equivalents between treatment groups
+```{r}
+metadata %>% 
+  filter(sample_ID %notin% "MA028.7") %>% 
+  wilcox_test(genome_equivalents ~ Treatment, alternative = "greater", paired = T) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p.adj") 
+```
+Comparison average genome size (AVG) treatment groups
+```{r}
+metadata %>% 
+  filter(sample_ID %notin% "MA028.7") %>% 
+  wilcox_test(average_genome_size_bp ~ Treatment, alternative = "greater", paired = T) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p.adj") 
+```
+
+## Linear-mixed effect models
+
+### Model 1: Interaction days_tx & temperature_Celsius + Interaction categorical Time & Treatment
+
+Raw reads
+```{r}
+library(nlme)
+metadata_names <- metadata %>% 
+  mutate(n50 = `N50 (Kbp)`, l50 = `L50 (K)`, largest = `Largest contig (Kbp)`, length = `Length (Mbp)`,ME =`ME (Mcal/lb)`, MP = `MP supply (g)`, DM = `DM Fed lbs`)
+
+raw_lm.test <- lme(reads_raw ~ days_tx*temperature_Celsius+Time_tx*Treatment, random=~1|study_ID, data = metadata_names)
+summary(raw_lm.test)
+anova(raw_lm.test)
+```
+
+Non-host reads
+```{r}
+nonhost_lm.test <- lme(reads_nonhost ~ days_tx*temperature_Celsius+Time_tx*Treatment, random=~1|study_ID, data = metadata_names)
+summary(nonhost_lm.test)
+anova(nonhost_lm.test)
+```
+Proportion Bos Taurus in Non-host reads
+```{r}
+host_lm.test <- lme(percentage_host ~ days_tx*temperature_Celsius+Time_tx*Treatment, random=~1|study_ID, data = metadata_names)
+summary(host_lm.test)
+anova(host_lm.test)
+```
+
+Genome equivalents
+```{r}
+ge_lm.test <- lme(genome_equivalents ~days_tx*temperature_Celsius+Time_tx*Treatment, random=~1|study_ID, data = metadata_names)
+summary(ge_lm.test)
+anova(ge_lm.test)
+```
+
+Average-genome size
+```{r}
+avg_lm.test <- lme(average_genome_size_bp ~days_tx*temperature_Celsius+Time_tx*Treatment, random=~1|study_ID, data = metadata)
+summary(avg_lm.test)
+anova(avg_lm.test)
+```
+Contigs
+```{r}
+contigs_lm.test <- lme(contigs_number ~ days_tx*temperature_Celsius+Time_tx*Treatment, random=~1|study_ID, data = metadata_names)
+summary(contigs_lm.test)
+anova(contigs_lm.test)
+```
+
+Reads mapping contigs %
+```{r}
+reads_contigs_lm.test <- lme(reads_mapped_contig_per ~days_tx*temperature_Celsius+Time_tx*Treatment, random=~1|study_ID, data = metadata_names)
+summary(reads_contigs_lm.test)
+anova(reads_contigs_lm.test)
+```
+
+N50
+```{r}
+n50_lm.test <- lme(n50 ~days_tx*temperature_Celsius+Time_tx*Treatment, random=~1|study_ID, data = metadata_names)
+summary(n50_lm.test)
+anova(n50_lm.test)
+```
+
+L50
+```{r}
+l50_lm.test <- lme(l50 ~days_tx*temperature_Celsius+Time_tx*Treatment, random=~1|study_ID, data = metadata_names)
+summary(l50_lm.test)
+anova(l50_lm.test)
+```
+
+Largest contig
+```{r}
+largest_lm.test <- lme(largest ~days_tx*temperature_Celsius+Time_tx*Treatment, random=~1|study_ID, data = metadata_names)
+summary(largest_lm.test)
+anova(largest_lm.test)
+```
+Length contig
+```{r}
+length_lm.test <- lme(length ~days_tx*temperature_Celsius+Time_tx*Treatment, random=~1|study_ID, data = metadata_names)
+summary(length_lm.test)
+anova(length_lm.test)
+```
+### Model 2: Interaction days_tx & temperature_Celsius + Interaction days_tx & Diet
+
+Raw reads
+```{r}
+raw_lm.test <- lme(reads_raw ~ days_tx*temperature_Celsius+diet*days_tx+Treatment, random=~1|study_ID, data = metadata_names)
+summary(raw_lm.test)
+anova(raw_lm.test)
+```
+
+Non-host reads
+```{r}
+nonhost_lm.test <- lme(reads_nonhost ~ days_tx*temperature_Celsius+diet*days_tx+Treatment, random=~1|study_ID, data = metadata_names)
+summary(nonhost_lm.test)
+anova(nonhost_lm.test)
+```
+Proportion Bos Taurus in Non-host reads
+```{r}
+host_lm.test <- lme(percentage_host ~ days_tx*temperature_Celsius+diet*days_tx+Treatment, random=~1|study_ID, data = metadata_names)
+summary(host_lm.test)
+anova(host_lm.test)
+```
+
+Genome equivalents
+```{r}
+ge_lm.test <- lme(genome_equivalents ~days_tx*temperature_Celsius+diet*days_tx+Treatment, random=~1|study_ID, data = metadata_names)
+summary(ge_lm.test)
+anova(ge_lm.test)
+```
+
+Average-genome size
+```{r}
+avg_lm.test <- lme(average_genome_size_bp ~days_tx*temperature_Celsius+diet*days_tx+Treatment, random=~1|study_ID, data = metadata)
+summary(avg_lm.test)
+anova(avg_lm.test)
+```
+
+Contigs
+```{r}
+contigs_lm.test <- lme(contigs_number ~ days_tx*temperature_Celsius+diet*days_tx+Treatment, random=~1|study_ID, data = metadata_names)
+summary(contigs_lm.test)
+anova(contigs_lm.test)
+```
+
+Reads mapping contigs %
+```{r}
+reads_contigs_lm.test <- lme(reads_mapped_contig_per ~days_tx*temperature_Celsius+diet*days_tx+Treatment, random=~1|study_ID, data = metadata_names)
+summary(reads_contigs_lm.test)
+anova(reads_contigs_lm.test)
+```
+
+N50
+```{r}
+n50_lm.test <- lme(n50 ~days_tx*temperature_Celsius+diet*days_tx+Treatment, random=~1|study_ID, data = metadata_names)
+summary(n50_lm.test)
+anova(n50_lm.test)
+```
+
+L50
+```{r}
+l50_lm.test <- lme(l50 ~days_tx*temperature_Celsius+diet*days_tx+Treatment, random=~1|study_ID, data = metadata_names)
+summary(l50_lm.test)
+anova(l50_lm.test)
+```
+
+Largest contig
+```{r}
+largest_lm.test <- lme(largest ~days_tx*temperature_Celsius+diet*days_tx+Treatment, random=~1|study_ID, data = metadata_names)
+summary(largest_lm.test)
+anova(largest_lm.test)
+```
+
+Length contig
+```{r}
+length_lm.test <- lme(length ~days_tx*temperature_Celsius+diet*days_tx+Treatment, random=~1|study_ID, data = metadata_names)
+summary(length_lm.test)
+anova(length_lm.test)
+```
+
+# Boxplots 
+
+Raw reads plot
+```{r}
+#Calculating p-values between treatments by time point
+stat.test <- metadata %>% 
+  group_by(Time_tx) %>%
+  filter(sample_ID %notin% "MA028.7") %>% 
+  wilcox_test(reads_raw ~ Treatment, alternative = "greater", paired = T) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p.adj") %>%
+  add_xy_position(x = "Time_tx", dodge = 0.8)
+stat.test
+
+raw_boxplot <- metadata %>%
+  mutate(Type = "Raw reads") %>% 
+  ggboxplot(x = "Time_tx", y = "reads_raw", 
+            color = "Treatment", palette = "jama", fill = "Treatment", alpha = 0.5,
+            xlab = F, ylab = "Number",
+            add = c("jitter"), notch = F, outlier.shape = NA, facet.by = "Type") +
+  stat_pvalue_manual(stat.test,  label = "p", tip.length = 0) + 
+  scale_y_continuous(labels = scales::scientific) + ylim(2e+06,1.15e+07)
+
+raw_boxplot
+```
+Non-host read's plot
+```{r}
+#Calculating p-values between treatments by time point
+stat.test <- metadata %>% 
+  group_by(Time_tx) %>%
+  filter(sample_ID %notin% "MA028.7") %>% 
+  wilcox_test(reads_nonhost ~ Treatment, alternative = "greater", paired = T) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p.adj") %>%
+  add_xy_position(x = "Time_tx", dodge = 0.8)
+stat.test
+
+nonhost_boxplot <- metadata %>%
+  mutate(Type = "Non-host reads") %>% 
+  ggboxplot(x = "Time_tx", y = "reads_nonhost", 
+            color = "Treatment", palette = "jama", fill = "Treatment", alpha = 0.5,
+            xlab = F, ylab = F,
+            add = c("jitter"), notch = F, outlier.shape = NA, facet.by = "Type") +
+  stat_pvalue_manual(stat.test,  label = "p", tip.length = 0) + 
+  scale_y_continuous(labels = scales::scientific) + ylim(2e+06,8.5e+06)
+
+nonhost_boxplot
+```
+
+Genome equivalent's plot
+```{r}
+#Calculating p-values between treatments by time point
+stat.test <- metadata %>% 
+  group_by(Time_tx) %>%
+  filter(sample_ID %notin% "MA028.7") %>% 
+  wilcox_test(genome_equivalents ~ Treatment, alternative = "greater", paired = T) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p.adj") %>%
+  add_xy_position(x = "Time_tx", dodge = 0.8)
+stat.test
+
+ge_boxplot <- metadata %>%
+  mutate(Type = "Genome equivalents") %>% 
+  ggboxplot(x = "Time_tx", y = "genome_equivalents", 
+            color = "Treatment", palette = "jama", fill = "Treatment", alpha = 0.5,
+            xlab = F, ylab = F,
+            add = c("jitter"), notch = F, outlier.shape = NA, facet.by = "Type") +
+  stat_pvalue_manual(stat.test,  label = "p", tip.length = 0) + 
+  scale_y_continuous(labels = scales::scientific)+
+  ylim(.7e+02,4.5e+02)
+ge_boxplot
+```
+
+Average-genome size plot
+```{r}
+#Calculating p-values between treatments by time point
+stat.test <- metadata %>% 
+  filter(sample_ID %notin% "MA028.7") %>% 
+  group_by(Time_tx) %>%
+  wilcox_test(average_genome_size_bp ~ Treatment, alternative = "two.sided", paired = T) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p.adj") %>%
+  add_xy_position(x = "Time_tx", dodge = 0.8)
+stat.test
+
+avg_boxplot = metadata %>%
+  mutate(Type = "AGS") %>% 
+  ggboxplot(x = "Time_tx", y = "average_genome_size_bp", 
+            color = "Treatment", palette = "jama", fill = "Treatment", alpha = 0.5,
+            add = c("jitter"), 
+            xlab = F, ylab = F,
+            notch = F, outlier.shape = NA, facet.by = "Type") +
+  ylim(20000000,45000000) +
+  stat_pvalue_manual(stat.test,  label = "p", tip.length = 0) +   
+  scale_y_continuous(labels = scales::scientific) 
+
+
+avg_boxplot
+```
+
+Saving plots
+```{r fig.width = 12, fig.height = 3.5}
+setwd("/Users/karlavasco/Library/CloudStorage/OneDrive-MichiganStateUniversity/Manning_lab/Mastitis_project/metagenome_KV/figures")
+reads <- ggarrange(raw_boxplot,nonhost_boxplot,ge_boxplot,nrow = 1, ncol = 3, common.legend = T)
+reads
+ggsave(plot=reads, "FigS2_reads_comparison.png", width = 12, height = 3.5)
+```

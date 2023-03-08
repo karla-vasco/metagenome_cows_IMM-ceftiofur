@@ -1,0 +1,557 @@
+---
+title: "ESBL-correlation network"
+output:
+  html_document:
+    df_print: paged
+---
+
+
+# Import normalized abundance tables
+```{r}
+library(readr)
+library(dplyr)
+setwd("/Users/karlavasco/Library/CloudStorage/OneDrive-MichiganStateUniversity/Manning_lab/Mastitis_project/metagenome_KV/tables/")
+
+plasmids <- read.csv("./plasmids/plasmids_norm_ab.csv",row.names = 1,check.names = F) %>% as.matrix()
+
+virulence <- read.csv("./virulence/virulence_norm_ab.csv",row.names = 1,check.names = F) %>% as.matrix()
+
+virome <- read.csv("./virome/virome_norm_ab.csv",row.names = 1,check.names = F) %>% as.matrix()
+
+resistome <- read.csv("./resistome/resistome_norm_ab_nomutants.csv",row.names = 1,check.names = F) %>% as.matrix()
+
+
+metadata <- read.csv("./metadata/metadata_metagenome_mastitis.csv",check.names = F)
+```
+Taxa Species
+```{r}
+`%notin%` <- Negate(`%in%`)
+setwd("/Users/karlavasco/Library/CloudStorage/OneDrive-MichiganStateUniversity/Manning_lab/Mastitis_project/metagenome_KV/tables/")
+
+taxa_full <- read.csv("./microbiome/microbiome_norm_ab.csv",check.names = F) %>% rename(Taxa = 1) %>% as.data.frame()
+
+library(data.table)
+
+taxa_sp_t <-  taxa_full[taxa_full$Taxa %like% "s__", ]
+
+taxa_t <- taxa_sp_t[taxa_sp_t$Taxa %like% "t__", ]
+
+taxa_sp <- taxa_sp_t %>% filter(Taxa %notin% taxa_t$Taxa)
+
+#separate taxa name into columns
+library(tidyr)
+taxa_sp_sep <-  taxa_sp %>% separate(Taxa, c("k","Kingdom","Phylum","Class","Order","Family","Genus","Species"),sep = "__") 
+library(tibble)
+taxa <- taxa_sp_sep %>% select(8:167) %>% 
+  remove_rownames %>% column_to_rownames(var="Species") %>% 
+  as.matrix(rownames=TRUE)
+```
+
+Taxa genus
+```{r}
+`%notin%` <- Negate(`%in%`)
+setwd("/Users/karlavasco/Library/CloudStorage/OneDrive-MichiganStateUniversity/Manning_lab/Mastitis_project/metagenome_KV/tables/")
+
+taxa_full <- read.csv("./microbiome/microbiome_norm_ab.csv",check.names = F) %>%
+  rename(Taxa = 1) %>% as.data.frame()
+
+library(data.table)
+taxa_g_sp <-  taxa_full[taxa_full$Taxa %like% "g__", ]
+
+taxa_sp_t <-  taxa_full[taxa_full$Taxa %like% "s__", ]
+
+taxa_g <- taxa_g_sp %>% filter(Taxa %notin% taxa_sp_t$Taxa)
+
+#separate taxa name into columns
+library(tidyr)
+library(tibble)
+taxa_g_sep <-  taxa_g %>% separate(Taxa, c("k","Kingdom","Phylum","Class","Order","Family","Genus"),sep = "__") 
+
+taxa <- taxa_g_sep %>% select(7:166) %>% 
+  remove_rownames %>% column_to_rownames(var="Genus") %>% 
+  as.matrix(rownames=TRUE)
+```
+
+## Nodes
+```{r}
+#Generating labels and type columns
+plasmids_id <- as.data.frame(rownames(plasmids)) %>% rename(Label = 1) %>% mutate(Type = "Plasmid")
+virulence_id <- as.data.frame(rownames(virulence)) %>% rename(Label = 1) %>% mutate(Type = "Virulence")
+resistome_id <- as.data.frame(rownames(resistome)) %>% rename(Label = 1) %>% mutate(Type = "ARG")
+taxa_id <- as.data.frame(rownames(taxa)) %>% rename(Label = 1) %>% mutate(Type = "Genus")
+virome_id <- as.data.frame(rownames(virome)) %>% rename(Label = 1) %>% mutate(Type = "Virus")
+
+#Joining labels
+node_ids <-plasmids_id %>% 
+  dplyr::union(virulence_id) %>% 
+  dplyr::union(resistome_id) %>% 
+  dplyr::union(taxa_id) %>% 
+  dplyr::union(virome_id)
+
+
+#Formating for Gephi
+nodes <- node_ids %>% 
+  mutate(id = 1:nrow(node_ids)) %>% #Number correspond to the number of observations in nodes table
+  select(Label, id, Type) #Reordering columns
+
+#Saving final file as csv
+write.csv(nodes, "/Users/karlavasco/Library/CloudStorage/OneDrive-MichiganStateUniversity/Manning_lab/Mastitis_project/metagenome_KV/tables/correlations/nodes_mastitis.csv", row.names = F)
+```
+
+# Correlations
+
+Join matrices by column names (sequence_id)
+```{r}
+matrix_joined <- rbind(plasmids, virulence[, colnames(plasmids)]) %>% 
+  rbind(resistome[, colnames(plasmids)]) %>% 
+  rbind(taxa[, colnames(plasmids)]) %>% 
+  rbind(virome[, colnames(plasmids)]) 
+matrix_joined[is.na(matrix_joined)] <- 0
+matrix_joined <- as.data.frame(matrix_joined)
+```
+
+DAY -1 ANTIBIOTIC
+Selecting sample ids per time point and treatment
+```{r}
+samples <- metadata %>% 
+  filter(Treatment == "Control", Time_tx == "Week 9") %>% 
+  select(sequence_id)
+```
+
+Calculate correlations
+```{r}
+#select columns with samples priorly selected
+matrix_group <- matrix_joined %>% select(samples$sequence_id) %>% as.matrix() %>% t()
+library(Hmisc)
+#Calculating correlations
+correlations <-rcorr(matrix_group)
+```
+
+Function to change correlation table format from wide to long
+```{r}
+#Function to change correlation table format
+flattenCorrMatrix <- function(cormat, pmat) {
+  ut <- upper.tri(cormat)
+  data.frame(
+    row = rownames(cormat)[row(cormat)[ut]],
+    column = rownames(cormat)[col(cormat)[ut]],
+    cor  =(cormat)[ut],
+    p = pmat[ut]
+    )
+}
+```
+
+```{r}
+correlations <- matrix_joined  %>% as.matrix() %>% t() %>% rcorr() 
+```
+
+## Generating edges
+```{r}
+edges = flattenCorrMatrix(correlations$r, correlations$P)
+
+#Renaming columns, adding correlation type, and filtering correlations higher than 0.75
+edges <- edges %>% 
+  dplyr::rename(Label = row, Target = column, Correlation = cor) %>% #Labels required in Gephi
+  mutate(Type = "undirected") %>% #This column is required in Gephi, tells the direction of the relationship between nodes
+  filter(Correlation >= 0.75, p <= 0.05) #Filtering significant correlations
+```
+
+```{r}
+#Changing labels for id numbers (corresponding to node id). This is the format that Gephi requires
+edges_source_numbers <- left_join(edges,nodes, by = "Label") %>%
+  dplyr::rename(Source = id) %>% 
+  select(Source, Target, Correlation, Type.x) %>% 
+  dplyr::rename(Label = Target)
+
+edges_target_source_numbers <- left_join(edges_source_numbers,nodes, by = "Label") %>% 
+  select(Source, id, Correlation, Type.x) %>% 
+  dplyr::rename(Target = id, Type = Type.x)
+```
+
+Saving edges files as csv
+```{r}
+#Edge table with node labels (just for reference)
+write.csv(edges, "/Users/karlavasco/Library/CloudStorage/OneDrive-MichiganStateUniversity/Manning_lab/Mastitis_project/metagenome_KV/tables/correlations/global_edges_labels.csv", row.names = F)
+
+#Edge table with node numbers (the one to use in Gephi)
+write.csv(edges_target_source_numbers, "/Users/karlavasco/Library/CloudStorage/OneDrive-MichiganStateUniversity/Manning_lab/Mastitis_project/metagenome_KV/tables/correlations/global_edges_gephi.csv", row.names = F)
+```
+
+
+# Select correlations with betalactamases
+```{r}
+setwd("/Users/karlavasco/Library/CloudStorage/OneDrive-MichiganStateUniversity/Manning_lab/Mastitis_project/metagenome_KV/tables/resistome/")
+esbls <- read.csv("esbls.csv",row.names = 1,check.names = F)
+esbls_allele <- as.data.frame(esbls$Allele) %>% distinct() %>% rename(Allele = 1) %>% arrange(Allele) 
+
+edges_esbls <- edges %>% filter(Label%in%esbls_allele$Allele | Target%in%esbls_allele$Allele)
+```
+
+# Network analyses
+```{r}
+library(readr)
+
+setwd("/Users/karlavasco/Library/CloudStorage/OneDrive-MichiganStateUniversity/Manning_lab/Mastitis_project/metagenome_KV/tables/correlations/")
+
+day1_ab <- read.csv("day1_antibiotic_stats_network.csv")
+day1_ct <- read.csv("day1_control_stats_network.csv")
+week1_ab <- read.csv("week1_antibiotic_stats_network.csv")
+week1_ct <- read.csv("week1_control_stats_network.csv")
+week5_ab <- read.csv("week5_antibiotic_stats_network.csv")
+week5_ct <- read.csv("week5_control_stats_network.csv")
+week9_ab <- read.csv("week9_antibiotic_stats_network.csv")
+week9_ct <- read.csv("week9_control_stats_network.csv")
+```
+
+Adding atributes to each table before merging them
+```{r}
+library(dplyr)
+day1_ab <- day1_ab %>% mutate(Time_tx = "Day -1", Treatment = "Antibiotic")
+day1_ct <- day1_ct %>% mutate(Time_tx = "Day -1", Treatment = "Control")
+week1_ab <- week1_ab %>% mutate(Time_tx = "Week 1", Treatment = "Antibiotic")
+week1_ct <- week1_ct %>% mutate(Time_tx = "Week 1", Treatment = "Control")
+week5_ab <- week5_ab %>% mutate(Time_tx = "Week 5", Treatment = "Antibiotic")
+week5_ct <- week5_ct %>% mutate(Time_tx = "Week 5", Treatment = "Control")
+week9_ab <- week9_ab %>% mutate(Time_tx = "Week 9", Treatment = "Antibiotic")
+week9_ct <- week9_ct %>% mutate(Time_tx = "Week 9", Treatment = "Control")
+```
+
+Joining tables into one dataframe
+```{r}
+network_stats <- day1_ab %>% 
+  full_join(day1_ct) %>% 
+  full_join(week1_ab) %>% 
+  full_join(week1_ct) %>% 
+  full_join(week5_ab) %>% 
+  full_join(week5_ct) %>% 
+  full_join(week9_ab) %>% 
+  full_join(week9_ct)
+```
+
+Making a new table only containing beta-lactamases ARGs
+```{r}
+setwd("/Users/karlavasco/Library/CloudStorage/OneDrive-MichiganStateUniversity/Manning_lab/Mastitis_project/metagenome_KV/tables/resistome/")
+esbls <- read.csv("esbls.csv", row.names = 1) 
+```
+
+
+```{r}
+betalactamases_net <- network_stats %>% 
+  filter(Label %in% esbls$Allele) %>% mutate(`Type`= "Beta-lactamases")
+betalactamases_net$Treatment <- factor(betalactamases_net$Treatment, levels= c("Control","Antibiotic"))
+```
+
+```{r}
+betalactamases_net %>% 
+  filter(Degree>0) %>% 
+  dplyr::select(modularity_class, Time_tx, Treatment, Degree) %>%
+  dplyr::mutate(count = 1) %>% 
+  dplyr::group_by(modularity_class, Time_tx, Treatment) %>% 
+  dplyr::summarise(total=sum(count),degree_sum = sum(Degree)) %>% arrange(desc(degree_sum))
+```
+
+
+```{r}
+#Calculating p-values between treatments by time point
+stat.test <- betalactamases_net %>%  
+  group_by(Time_tx) %>%
+  filter(Degree > 0) %>% 
+  wilcox_test(Degree ~ Treatment, alternative = "less") %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p.adj") %>%
+  add_xy_position(x = "Time_tx", dodge = 0.8)
+stat.test
+
+library(ggpubr)
+library(ggsci)
+betalactamases_degree_boxplot <- betalactamases_net %>% 
+   filter(Degree > 0) %>% 
+  ggboxplot(x = "Time_tx", y = "Degree", color = "Treatment", palette = "jama", fill = "Treatment", add = c("jitter"), notch = F, outlier.shape = NA,facet.by = "Type", scales = "free") +
+  labs(x = "Time to treatment", y = "Degree of centrality", colour = "Treatment", fill = "Treatment") + 
+  scale_fill_jama(alpha = 0.5) +
+stat_pvalue_manual(stat.test,  label = "p", tip.length = 0) +  theme(axis.title.x = element_blank())
+#  ylim(2,20)+
+
+betalactamases_degree_boxplot
+```
+
+
+```{r}
+#Calculating p-values between treatments by time point
+stat.test <- betalactamases_net %>%  
+  group_by(Time_tx) %>%
+  wilcox_test(Degree ~ Treatment, alternative = "less") %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p.adj") %>%
+  add_xy_position(x = "Time_tx", dodge = 0.8)
+stat.test
+
+library(ggpubr)
+library(ggsci)
+betalactamases_net_boxplot <- betalactamases_net %>% 
+  filter(modularity_class == 0) %>% 
+  #filter(Label %in% c("TEM-99","CfxA3","CMY-59","CMY-22","BcIII","CTX-M-141","TEM-108","SHV-160","SHV-7")) %>%  
+  ggline(x = "Time_tx", y = "Degree", color = "Treatment", palette = "jama", fill = "Treatment", add = c("jitter"), notch = F, outlier.shape = NA,facet.by = "Treatment", scales = "free") +
+  labs(x = "Time to treatment", y = "Degree of centrality", colour = "Treatment", fill = "Treatment") + 
+  scale_fill_jama(alpha = 0.5) 
+
+#  ylim(2,20)+
+#  stat_pvalue_manual(stat.test,  label = "p", tip.length = 0) +  theme(axis.title.x = element_blank())
+
+betalactamases_net_boxplot
+```
+
+```{r}
+#Calculating p-values between treatments by time point
+stat.test <- betalactamases_net %>%  
+    filter(betweenesscentrality > 100) %>% 
+  group_by(Time_tx) %>%
+  wilcox_test(betweenesscentrality ~ Treatment, alternative = "greater") %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p.adj") %>%
+  add_xy_position(x = "Time_tx", dodge = 0.8)
+stat.test
+
+library(ggpubr)
+library(ggsci)
+betalactamases_bc_boxplot <- betalactamases_net %>% 
+  filter(modularity_class == 0) %>% 
+# filter(Label %in% c("TEM-99","CfxA3","CMY-59","CMY-22","BcIII","CTX-M-141","TEM-108","SHV-160","SHV-7")) %>%  
+  ggline(x = "Time_tx", y = "betweenesscentrality", color = "Treatment", palette = "jama", fill = "Treatment", add = c("jitter"), notch = F, outlier.shape = NA,facet.by = "Treatment", scales = "free") +
+  labs(x = "Time to treatment", y = "Betweeness centrality", colour = "Treatment", fill = "Treatment") + 
+  scale_fill_jama(alpha = 0.5) 
+#  ylim(2,20)+
+# stat_pvalue_manual(stat.test,  label = "p", tip.length = 0) +  theme(axis.title.x = element_blank())
+
+betalactamases_bc_boxplot
+```
+
+
+```{r}
+betcen_line <- betalactamases_net %>% 
+  ggline(x = "Time_tx", y = "betweenesscentrality", add = c("mean_se"), facet.by = "Treatment", palette = get_palette("simpsons",238), ylab = "Betweenness centrality", xlab = "Time to treatment") + labs(fill="Gene", color="Gene") + theme(legend.text = element_text(face = "italic"))
+betcen_line
+```
+```{r}
+degree_line <- betalactamases_net %>% 
+  ggline(x = "Time_tx", y = "Degree", add = c("mean_se"), facet.by = "Treatment", palette = get_palette("simpsons",238), ylab = "Degree of centrality", xlab = "Time to treatment") + labs(fill="Gene", color="Gene") + theme(legend.text = element_text(face = "italic"))
+degree_line
+```
+
+
+HEATMAP ESBLS
+```{r fig.height=10}
+betalactamases_bc_mx <- betalactamases_net %>% 
+  mutate(Time = paste(Time_tx,"-",Treatment)) %>% 
+  dplyr::select(Label,Time, betweenesscentrality)%>% 
+  tidyr::spread(Label, betweenesscentrality) %>% 
+  remove_rownames %>% column_to_rownames(var="Time")%>% 
+  as.matrix(rownames=TRUE)
+betalactamases_bc_mx[is.na(betalactamases_bc_mx)] <- 0
+```
+
+```{r fig.height=20, fig.width=6}
+library(pheatmap)
+library(viridis) #color pallet, it's optional
+library(RColorBrewer)
+
+
+#HEATMAP RA USING ln color pallet RBrewer
+heatmap <- pheatmap(
+    mat               = t(log10(betalactamases_bc_mx+0.0000001)),
+  border_color      = NA,
+  show_colnames     = T,
+  show_rownames     = T,
+  angle_col = 90,
+#  drop_levels       = TRUE,
+#  fontsize_col = 4,
+ # fontsize_row = 5,
+#  fontsize          = 14,
+ # color             = brewer.pal(9,"Reds"),
+color = viridis(100),  
+#number_color = NA,
+# annotation_col = annotations,
+ # annotation_colors = anno_color,
+ # annotation_names_col = T,
+  annotation_names_row = F,
+  cluster_cols = F,
+  cluster_rows = T,
+ clustering_method = "ward.D",
+  gaps_row = FALSE)
+heatmap
+```
+
+```{r fig.height=10}
+betalactamases_degree_mx <- betalactamases_net %>% 
+  mutate(Time = paste(Time_tx,"-",Treatment)) %>% 
+  dplyr::select(Label,Time, Degree)%>% 
+  tidyr::spread(Label, Degree) %>% 
+  remove_rownames %>% column_to_rownames(var="Time")%>% 
+  as.matrix(rownames=TRUE)
+betalactamases_degree_mx[is.na(betalactamases_degree_mx)] <- 0
+```
+
+```{r fig.height=20, fig.width=6}
+library(pheatmap)
+library(viridis) #color pallet, it's optional
+library(RColorBrewer)
+
+
+#HEATMAP RA USING ln color pallet RBrewer
+heatmap <- pheatmap(
+    mat               = t(log10(betalactamases_degree_mx+0.0000001)),
+  border_color      = NA,
+  show_colnames     = T,
+  show_rownames     = T,
+  angle_col = 90,
+#  drop_levels       = TRUE,
+#  fontsize_col = 4,
+ # fontsize_row = 5,
+#  fontsize          = 14,
+ # color             = brewer.pal(9,"Reds"),
+color = viridis(100),  
+#number_color = NA,
+# annotation_col = annotations,
+ # annotation_colors = anno_color,
+ # annotation_names_col = T,
+  annotation_names_row = F,
+  cluster_cols = F,
+  cluster_rows = T,
+ clustering_method = "ward.D",
+  gaps_row = FALSE)
+heatmap
+```
+
+#Global network
+```{r}
+library(readr)
+setwd("/Users/karlavasco/Library/CloudStorage/OneDrive-MichiganStateUniversity/Manning_lab/Mastitis_project/metagenome_KV/tables/correlations/")
+
+global <- read.csv("global_stats_network.csv")
+```
+```{r}
+ global %>% select(type) %>% group_by(type) %>% tally()
+```
+
+
+```{r}
+global_betalactamases <- global %>% 
+  filter(Label %in% esbls$Allele) %>% mutate(`Type`= "Beta-lactamases")
+betalactamases_net$Treatment <- factor(betalactamases_net$Treatment, levels= c("Control","Antibiotic"))
+```
+
+```{r}
+taxa_labels <- taxa_g_sep %>% select(3, 7)
+
+taxa_betalactamases <- global %>% 
+  filter(modularity_class %in% modules_betalactamases$modularity_class, Degree > 0) %>%
+  select(type,Label,Degree) %>% filter(type == "Genus") %>% group_by(Label) %>% summarise(degree_sum = sum(Degree)) %>% arrange(desc(degree_sum)) %>% rename(Genus = Label) %>% merge(taxa_labels, by = "Genus") %>% mutate(count = 1)
+taxa_betalactamases
+```
+```{r}
+taxa_betalactamases %>% group_by(Phylum) %>% tally() %>% arrange(desc(n))
+```
+
+```{r}
+phylum_assignments <- data.frame(Phylum = c("Firmicutes", "Bacteroidetes","Actinobacteria","Proteobacteria","Others"),Count = c(121,35,22,11,61))
+```
+```{r}
+taxa_plot <- phylum_assignments %>% ggbarplot(x="Phylum", y="Count",color = "Phylum",fill="Phylum",xlab = "Phylum", ylab =  "Nº genera correlated with beta-lactamases", palette = "aaas",legend="none")
+taxa_plot
+```
+
+```{r}
+modules_betalactamases <- global_betalactamases %>% 
+  filter(Degree>0) %>% 
+  dplyr::select(modularity_class, Degree) %>%
+  dplyr::mutate(count = 1) %>% 
+  dplyr::group_by(modularity_class) %>% 
+  dplyr::summarise(total=sum(count),degree_sum = sum(Degree)) %>% arrange(desc(degree_sum))
+modules_betalactamases
+```
+
+
+```{r}
+assigments <- global %>% 
+#  filter(modularity_class==0) %>%
+  mutate(Assignment = case_when(Label %like% 'Escherichia' ~'Escherichia',
+  Label %like% 'Salmonella' ~'Salmonella',
+  Label %like% 'Klebsiella' ~'Klebsiella',
+  Label %like% 'Citrobacter' ~'Citrobacter',
+  Label %like% 'Enterobacter' ~'Enterobacteria',
+    Label %like% 'Shigella' ~'Shigella',
+      Label %like% 'GGB25579' ~'GGB25579'
+  ))
+
+assigments$Assignment <- assigments$Assignment %>% replace_na('Others')
+```
+
+```{r fig.height=8}
+module_0 <- assigments %>% 
+  filter(modularity_class %in% c(0,2,174,4,6,96,163,144,92,48, 105,115,137,87,18,97,15,112,41,104)) %>% 
+  mutate(Count = 1) %>% 
+  ggbarplot(x="type",y="Count", color = "Assignment",fill="Assignment",xlab = "none",palette = "simpsons", facet.by = "modularity_class", scales = "free")
+module_0
+```
+
+```{r fig.width=8}
+all_plot <- assigments %>% 
+  filter(modularity_class %in% modules_betalactamases$modularity_class) %>% 
+  filter(type %notin% c("ARG","Genus")) %>% 
+  mutate(Count = 1) %>% 
+  ggbarplot(x="Assignment",y="Count", color = "Assignment",fill="Assignment",xlab = "Assignment", ylab =  "Number of correlations with beta-lactamases", palette = "jco", facet.by = "type", scales = "free", legend = "none", order = c("Others","Escherichia","Klebsiella","Salmonella","Enterobacteria","Shigella","Citrobacter","GGB25579")) + 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, face = "italic"))
+all_plot
+```
+```{r}
+setwd("/Users/karlavasco/Library/CloudStorage/OneDrive-MichiganStateUniversity/Manning_lab/Mastitis_project/metagenome_KV/figures")
+ggsave(plot=all_plot, "correlations_genes_esbls.png", width = 6, height = 6)
+ggsave(plot=taxa_plot, "correlations_taxa_esbls.png", width = 7, height = 6)
+
+```
+
+```{r}
+#Viruses module 0 = 42
+viruses_Escherichia <- global %>% 
+  filter(modularity_class==0) %>%
+  filter(type == "Virus") %>% 
+  filter(Label %like% "Escherichia")
+#viruses module 0 = Escherichia = 30
+```
+
+```{r}
+viruses_others <- global %>% 
+  filter(modularity_class==0) %>%
+  filter(type == "Virus") %>% 
+  filter(Label %notin% viruses_Escherichia$Label)
+viruses_others
+```
+
+```{r}
+#plasmids module 0 = 105
+plasmids_Escherichia <- global %>% 
+  filter(modularity_class==0) %>%
+  filter(type == "Plasmid") %>% 
+  filter(Label %like% "Escherichia")
+#plasmids module 0 = Escherichia = 55
+plasmids_Escherichia
+```
+
+```{r}
+plasmid_others <- global %>% 
+  filter(modularity_class==0) %>%
+  filter(type == "Plasmid") %>% 
+  filter(Label %notin% plasmids_Escherichia$Label) %>% 
+  select(Label)
+plasmid_others
+```
+
+```{r}
+plasmid_others %>% filter(Label %like% "Klebsiella") 
+```
+```{r}
+plasmid_others %>% filter(Label %like% "Shigella") 
+```
+```{r}
+plasmid_others %>% filter(Label %like% "Salmonella") 
+```

@@ -1,0 +1,202 @@
+---
+title: "Beta-lactamase-carrying contig (BCC) analyses"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
+# Import tables
+
+Outputs from Blastp analyses of translated contigs
+```{r}
+library(readxl)
+
+setwd("/Users/karlavasco/Library/CloudStorage/OneDrive-MichiganStateUniversity/Manning_lab/Mastitis_project/metagenome_KV/tables/contigs/")
+resistome <- read_excel("contigs_mapped.xlsx", sheet = "card")
+virulence <- read_excel("contigs_mapped.xlsx", sheet = "vfdb")
+mges <- read_excel("contigs_mapped.xlsx", sheet = "mobileog")
+```
+
+# Identification of contigs carrying ESBLs
+
+List of betalactamases with cephalosporin inactivation activity identified by read based analyses
+```{r}
+library(dplyr)
+setwd("/Users/karlavasco/Library/CloudStorage/OneDrive-MichiganStateUniversity/Manning_lab/Mastitis_project/metagenome_KV/tables/resistome/")
+resistome_full <- read_excel("rgi_mastitis.xlsx", sheet = "RGI_bwt_allele_seqname_noheader")
+
+taxonomy <- resistome_full %>% 
+  select(`Reference Sequence`,	`Reference Model Type`,	
+         `Drug Class`,	`Resistance Mechanism`,
+         `AMR Gene Family`,`ARO Term`) %>% 
+  distinct() %>%
+  rename(Model = `Reference Model Type`,
+         Class=`Drug Class`,
+         Mechanism=`Resistance Mechanism`,
+         Family=`AMR Gene Family`, Allele=`ARO Term`)
+
+library(data.table)
+betalactamases <- taxonomy[taxonomy$Family %like% "beta-lactamase", ]
+esbls <- betalactamases[betalactamases$Class %like% "ceph", ]
+```
+
+Selecting contigs carrying ESBLs
+```{r}
+contigs_esbls <- resistome %>% 
+  dplyr::filter(grepl("CfxA6|CGB-1|ACI-1|OXA-193|OXA-608|CfxA2|CfxA4|TEM-183|EC-5|SHV-200|CfxA2|CTX-M-20|CfxA2|OXA-62|CfxA3|CfxA4|CMY-22|TEM-193|CfxA2|CfxA2|CMY-22|SHV-160|CfxA2|ADC-83|CfxA2|EC-14|CMY-139|TEM-116|SHV-1b-b|CTX-M-66|OXA-465|NmcA|SHV-7|CfxA2|TEM-99|TEM-208|OXA-730|CTX-M-124|CfxA2|EC-5|CfxA2|CfxA2|CfxA|EC-8|CTX-M-141|CfxA5|TEM-108|CTX-M-77|CfxA2|CTX-M-141|CTX-M-124|OXA-159|OXA-726|CfxA4|PDC-277|OXA-575|Escherichia coli ampC beta-lactamase|TEM-191|TEM-88|CMY-27|OXA-295|CfxA6|ADC-129|CIA-2|BcIII|CTX-M-105|CfxA4|EC-15|OXA-308|ADC-89|CTX-M-74|TEM-171|CTX-M-216|CTX-M-141|BcI|TEM-98|ADC-53|EC-5|EC-5|ACT-29|OXA-605|KPC-22|TEM-176|SHV-5|EC-5|OXA-923|BcIII|TEM-116|CMY-59|ADC-70|OXA-493|OXA-919|ACT-4|CTX-M-225|OXA-948|DHA-10|PER-1|OXA-661|BcII|TEM-208|OXY-5-1|CMY-139|OXA-464|CTX-M-69|CfxA2|OXA-58|EC-14|EC-13|OXA-548|NDM-16a|OXA-659|EC-15|BcIII|OXA-242|TEM-102|TEM-118|OXA-912|CMY-147|GOB-44|CTX-M-210|TER-1|CMY-59|Escherichia coli ampC beta-lactamase|EC-15|EC-13|EC-5|CMY-139|CTX-M-124|TEM-95|OXA-617|EC-18|CMY-59|OXA-207|ADC-53|OXA-158|OXA-193|CTX-M-68|EC-13|SRT-2|GOB-46|EC-5|ADC-53|TEM-91|CMY-59|OXA-896|OXA-453|CfxA3|OXA-170|GOB-33|CTX-M-225|CfxA4|ADC-155|CSA-1|BcII|EC-8|OXA-214|BcIII|BcI|CTX-M-239|TEM-228|ADC-18|VEB-1b|CTX-M-238|CfxA4|OXA-783|VIM-5|EBR-2|BcI|ADC-194|Escherichia coli ampC beta-lactamase|EC-5|BcIII|CTX-M-242|EC-8|BcIII|EC-14|Rm3|BcIII|EC-15|OXA-347|BcII|TEM-163|TEM-57|Escherichia coli ampC beta-lactamase|OXA-64|OXA-659|CTX-M-38|SHV-63|OXA-225|OXA-300|CfxA5|TEM-105|CMY-59|BcII|EC-15|BcII|OXA-85|BcIII|CMY-132|EBR-4|ACT-56|CMY-133|L1 beta-lactamase|OXA-726|BcIII|FEZ-1|CSP-1|OXA-947|TEM-91|PRC-1|OXA-225|CMY-32|CMY-111|CMY-30|OXA-184|OXA-659|TEM-148|OXA-728|TEM-127|ADC-227|EC-8|SHV-5|CTX-M-142|SHV-228|IMP-21|EC-8|JOHN-1|SHV-165|CTX-M-2|SRT-3|OXA-265|BcIII|CTX-M-23|TEM-109|SHV-123|TEM-137|MOX-12|CFE-1", sseqid)) %>% 
+  dplyr::mutate(id_contig = paste(sequence_id,"_",contig))
+```
+
+
+## Filtering contigs with Mobile genetic elements (MGEs) and ESBLs 
+```{r}
+mges_esbls <- mges %>% dplyr::select(sequence_id,contig,sseqid) %>% 
+  dplyr::mutate(id_contig = paste(sequence_id,"_",contig)) %>% 
+  filter(id_contig %in% contigs_esbls$id_contig) %>% 
+  mutate(Type = case_when(sseqid %like% "conjugation" ~ "Conjugation", 
+                          sseqid %like% "phage" ~"Phage", 
+                          sseqid %like% "integration/excision" ~ "Integration/Excision")) %>% 
+  mutate(MGE = case_when(sseqid %like% "groL|groEL" ~ "groEL", 
+                         sseqid %like% "tnpA" ~"tnpA", 
+                          sseqid %like% "mobN" ~ "mobN",
+                         sseqid %like% "traC" ~"traC", 
+                          sseqid %like% "HMPREF1204_00020" ~"HMPREF1204_00020",
+                          sseqid %like% "mobB" ~"mobB",
+                          sseqid %like% "mobB" ~"mobB"))
+library(tidyr)
+mges_esbls$Type <- mges_esbls$Type %>% replace_na('Transfer')
+```
+
+
+## Filtering contigs with Virulence factors and ESBLs 
+```{r}
+virulence_esbls <- virulence %>% 
+  dplyr::select(sequence_id,contig,sseqid) %>% 
+  dplyr::mutate(id_contig = paste(sequence_id,"_",contig)) %>% 
+  filter(id_contig %in% contigs_esbls$id_contig)
+```
+
+Identifying unique ids of VF identified in BCC
+```{r}
+virulence_esbls %>% select(sseqid) %>% distinct() %>% arrange()
+```
+
+Importing file with virulence factor ids from read-based characaterization of VFs
+```{r}
+virulence_id <- read.csv("/Users/karlavasco/Library/CloudStorage/OneDrive-MichiganStateUniversity/Manning_lab/Mastitis_project/metagenome_KV/tables/virulence/virulence_norm_ab.csv",row.names = 1,check.names = F) %>% as.matrix()
+virulence_id <- as.data.frame(rownames(virulence_id)) %>% rename(Label = 1) %>% 
+  mutate(Type = "Virulence")
+```
+
+Merging virulence gene ids with BCCs carrying VF
+```{r}
+virulence_esbls_id <- virulence_id %>% 
+  dplyr::filter(grepl("WP_003435012|WP_003514589|WP_011722916|WP_010965990|WP_003462314|WP_197532029|WP_011100542|WP_011967678", Label)) %>% 
+  select(Label) %>% 
+  mutate(sseqid = case_when(Label %like% "WP_003435012" ~ "VFG012095(gb|WP_003435012)", 
+                            Label %like% "WP_003514589" ~ "VFG012103(gb|WP_003514589)",
+                            Label %like% "WP_011722916" ~ "VFG012096(gb|WP_011722916)",
+                            Label %like% "WP_010965990" ~ "VFG012101(gb|WP_010965990)",
+                            Label %like% "WP_003462314" ~ "VFG012097(gb|WP_003462314)",
+                            Label %like% "WP_197532029" ~ "VFG045692(gb|WP_197532029)",
+                            Label %like% "WP_011100542" ~ "VFG012099(gb|WP_011100542)",
+                            Label %like% "WP_011967678" ~ "VFG012102(gb|WP_011967678)"))
+
+virulence_betalactamases <- merge(virulence_esbls_id, virulence_esbls, by = "sseqid") %>% 
+  mutate(Virulence_gene = case_when(Label %like% "groL|groEL" ~ "groEL", 
+                                    Label %like% "htpB" ~"htpB")) 
+```
+
+
+# Making lists of BCCs for taxonomic classification
+
+List used for extraction of fasta with seqk
+```{r results=FALSE}
+library(purrr)
+library(readr)
+contigs_esbls %>% 
+  mutate(filepath = paste0("/Users/karlavasco/Library/CloudStorage/OneDrive-MichiganStateUniversity/Manning_lab/Mastitis_project/metagenome_KV/tables/contigs/lists/", sequence_id,".lst")) %>% 
+  select(filepath,contig) %>%
+  group_by(filepath) %>%
+  group_split() %>% 
+    map(
+      .f = function(data){
+        write_csv(data, file = unique(data$filepath))
+      }
+    )
+```
+
+Copy lists in bash terminal and run this for lists and further CAT taxonomic characterization
+```{r results=FALSE}
+#eliminate first row
+# sed -i '1d' *.lst
+
+#eliminate first column
+#for f in *.lst # for each sample f
+#do
+#  n=${f%%.lst} # strip part of file name
+#awk -v OFS='\t' '{print $2}' ${n}.lst > ${n}_contig.lst
+#done
+```
+
+Import CAT taxonomic identification
+```{r}
+setwd("/Users/karlavasco/Library/CloudStorage/OneDrive-MichiganStateUniversity/Manning_lab/Mastitis_project/metagenome_KV/tables/resistome/")
+cat <- read.table("cat_names.tsv", header = T, sep = "\t")
+```
+
+Filtering only contigs with taxonomic identification
+```{r}
+`%notin%` <- Negate(`%in%`)
+taxa_cat <- cat %>% filter(phylum %notin% c("no support", NA,"")) %>% 
+  select(sequence_id, contig, phylum:species) %>% 
+  mutate(id_contig = paste(sequence_id,"_",contig)) 
+#  separate(phylum, sep = ": ", c("Phylum","Score"))
+```
+
+Merging taxonomic identification with BCCs
+```{r}
+contigs_taxa <- merge(contigs_esbls, taxa_cat, by="id_contig") %>% 
+  filter(phylum %notin% NA) %>% 
+  dplyr::select(id_contig,sseqid,phylum:species) %>% 
+  arrange(sseqid)
+```
+
+Table concatenating beta-lactamases, MGEs, virulence factors and taxonomic classification of BCCs
+```{r}
+contigs_final <- merge(contigs_esbls, taxa_cat ,by="id_contig",all.x = T) %>% 
+  merge(mges_esbls,by="id_contig",all.x = T) %>% 
+  merge(virulence_betalactamases, by="id_contig",all.x = T) %>% 
+  select(id_contig,3,Type,MGE,Virulence_gene,phylum:species) %>% 
+  mutate(ARG = case_when(sseqid.x %like% "SHV-160" ~ "SHV-160", 
+                         sseqid.x %like% "CfxA2" ~"CfxA2", 
+                          sseqid.x %like% "CfxA6" ~ "CfxA6",
+                         sseqid.x %like% "CfxA4" ~"CfxA4", 
+                          sseqid.x %like% "TEM-208" ~"TEM-208",
+                          sseqid.x %like% "EC-5" ~"EC-5",
+                          sseqid.x %like% "ACI-1" ~"ACI-1",
+                          sseqid.x %like% "TEM-116" ~"TEM-116",
+                          sseqid.x %like% "TEM-183" ~"TEM-183",
+                          sseqid.x %like% "OXA-659" ~"OXA-659"))
+head(contigs_final)
+```
+
+Summary of BCC characaterization
+```{r}
+contig_summary <- contigs_final %>% mutate(count=1) %>% 
+  group_by(ARG,Type,MGE, Virulence_gene, phylum) %>% 
+  dplyr::summarise(total = sum(count)) %>% 
+  arrange(ARG,desc(total))
+contig_summary
+```
+
+Saving summary table
+```{r}
+setwd("/Users/karlavasco/Library/CloudStorage/OneDrive-MichiganStateUniversity/Manning_lab/Mastitis_project/metagenome_KV/tables/resistome/")
+write.csv(contig_summary, "contig_summary.csv",row.names = T)
+```
+

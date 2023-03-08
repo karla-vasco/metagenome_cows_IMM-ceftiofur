@@ -1,0 +1,562 @@
+---
+title: "Microbiome profiling"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
+# Activating Libraries
+```{r error=FALSE}
+library(readxl)
+library(ggpubr)
+library(ggsci)
+library(dplyr)
+library(rstatix)
+
+# Function use to filter data that do not contain an element or list of elements with dplyr
+`%notin%` <- Negate(`%in%`)
+```
+
+# Data wrangling
+
+Importing data
+```{r}
+setwd("/Users/karlavasco/Library/CloudStorage/OneDrive-MichiganStateUniversity/Manning_lab/Mastitis_project/metagenome_KV/tables/metadata/")
+data <- read_excel("IMM_ceftiofur_metadata.xlsx", sheet = "metadata")
+microbiome <- read_excel("IMM_ceftiofur_metadata.xlsx", sheet = "metaphlan")
+metagenome_stats <- read_excel("IMM_ceftiofur_metadata.xlsx", sheet = "metagenome_stats")
+temperature <- read_excel("IMM_ceftiofur_metadata.xlsx", sheet = "temperature")
+diet <- read_excel("IMM_ceftiofur_metadata.xlsx", sheet = "diet")
+```
+
+Merging tables for metadata
+```{r}
+metadata <- merge(data, diet) %>% 
+  merge(temperature) %>%
+  merge(metagenome_stats) %>% 
+  merge(microbiome) %>% 
+  mutate(Treatment = factor(Treatment, levels = c("Control", "Antibiotic")),
+          Time_tx = factor(Time_tx, levels = c("Day -1", "Week 1", "Week 5", "Week 9")))
+```
+
+Normalizing abundance based on Genome equivalents
+```{r}
+metadata <- metadata %>% mutate(normalized_abundance = Reads/genome_equivalents*100)
+```
+
+# Proportion of reads mapping taxa
+
+Calculating proportion of reads per taxa based on the number of Non-host reads
+```{r}
+metadata <- metadata %>% mutate(proportion_reads = Reads/reads_nonhost*100)
+
+metadata %>% 
+  filter(Taxa %in% c("k__Bacteria","k__Archaea","k__Eukaryota")) %>% 
+  group_by(sample_ID, Time_tx,Treatment,reads_nonhost,Taxa) %>% 
+  dplyr::summarise(sum = sum(Reads)) %>% 
+  mutate(proportion = sum/reads_nonhost*100) %>% 
+  group_by(Taxa) %>% 
+  dplyr::summarise(mean=mean(proportion),sd = sd(proportion))
+```
+
+Importing counts kraken-bracken
+```{r}
+kraken <- read_excel("/Users/karlavasco/Library/CloudStorage/OneDrive-MichiganStateUniversity/Manning_lab/Mastitis_project/metagenome_KV/tables/metadata/IMM_ceftiofur_metadata.xlsx", sheet = "bracken")
+kraken$Taxa <- trimws(kraken$Taxa_bracken)
+
+# Merging kraken and metadata
+metadata_kraken <- merge(data, diet) %>% 
+  merge(temperature) %>%
+  merge(metagenome_stats) %>% 
+  merge(kraken) %>% 
+  mutate(Treatment = factor(Treatment, levels = c("Control", "Antibiotic")),
+          Time_tx = factor(Time_tx, levels = c("Day -1", "Week 1", "Week 5", "Week 9"))) %>% mutate(normalized_abundance = reads_bracken/genome_equivalents*100)
+```
+
+Calculating domain proportion from bracken
+```{r}
+metadata_kraken %>% filter(level == "D", Taxa_bracken %in% c("Viruses","Bacteria","Archaea","Eukaryota")) %>% 
+  group_by(sample_ID, Time_tx,Treatment,reads_nonhost,Taxa_bracken) %>% 
+  dplyr::summarise(sum = sum(reads_bracken)) %>% 
+  mutate(proportion = sum/reads_nonhost*100) %>% 
+  group_by(Taxa_bracken) %>% 
+  dplyr::summarise(mean=mean(proportion),sd = sd(proportion))
+```
+
+
+# Linear-mixed effect models
+
+Bacteria
+```{r}
+library(nlme)
+bac <- metadata %>% 
+  filter(Taxa %in% c("k__Bacteria")) 
+lm.test <- lme(Reads ~ days_tx*temperature_Celsius+diet*days_tx+Treatment, random=~1|study_ID, data = bac)
+summary(lm.test)
+anova(lm.test)
+```
+
+Eukaryota
+```{r}
+library(nlme)
+euk <- metadata %>% 
+  dplyr::filter(Taxa %in% c("k__Eukaryota"))
+lm.test <- lme(Reads ~ days_tx, random=~1|study_ID, data = euk)
+summary(lm.test)
+anova(lm.test)
+```
+
+Archaea
+```{r}
+library(nlme)
+arc <- metadata %>% 
+  filter(Taxa %in% c("k__Archaea")) 
+lm.test <- lme(Reads ~ days_tx*temperature_Celsius+diet*days_tx+Treatment, random=~1|study_ID, data = arc)
+summary(lm.test)
+anova(lm.test)
+```
+
+Viruses
+```{r}
+library(nlme)
+vir <- metadata_kraken%>% 
+  filter(Taxa_bracken %in% c("Viruses")) 
+lm.test <- lme(reads_bracken ~ days_tx*temperature_Celsius+days_tx+Treatment, random=~1|study_ID, data = vir)
+summary(lm.test)
+anova(lm.test)
+```
+
+# Microbiome abundance
+
+Microbiome Abundance table
+```{r}
+abundance_feature <- metadata %>% 
+  select(normalized_abundance, Treatment, Time_tx, sample_ID,Taxa) %>% 
+  group_by(Treatment, Time_tx, sample_ID) %>% 
+  dplyr::summarise(Abundance = sum(normalized_abundance)) %>% 
+  as.data.frame() %>% mutate(Type = "Microbiome")
+
+abundance_feature$Treatment <- factor(abundance_feature$Treatment, levels= c("Control","Antibiotic"))
+```
+
+Microbiome Abundance plot
+```{r}
+#Calculating p-values between treatments by time point
+stat.test <- abundance_feature %>% 
+  filter(sample_ID %notin% c("MA028.7")) %>% 
+  group_by(Time_tx) %>%
+  wilcox_test(Abundance ~ Treatment, alternative = "greater", paired = T) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p.adj") %>%
+  add_xy_position(x = "Time_tx", dodge = 0.8)
+stat.test
+
+#Boxplot of Observed diversity between treatment groups over time
+Abundance_boxplot = abundance_feature %>%  
+  ggboxplot(x = "Time_tx", y = "Abundance", 
+            color = "Treatment", palette = "jama", fill = "Treatment", alpha = 0.5,
+            add = c("jitter"), notch = F, outlier.shape = NA, facet.by = "Type",
+            xlab = F, ylab = "Abundance score") +
+  ylim(2e6,7.3e6) +
+  stat_pvalue_manual(stat.test,  label = "p", tip.length = 0)
+
+Abundance_boxplot
+```
+
+## Phylum abundance plot
+```{r fig.height=7, fig.width=7}
+library(data.table)
+library(tidyr)
+class <- metadata %>% 
+  select(normalized_abundance, Treatment, Time_tx, sample_ID, Taxa) %>% 
+  filter(Taxa %like% "c__")
+
+phylum <- metadata %>% filter(Taxa %notin% class$Taxa) %>% 
+  filter(Taxa %like% "p__") %>% 
+  group_by(Treatment, Time_tx, Taxa) %>% 
+  dplyr::summarise(Abundance = mean(normalized_abundance)) %>% 
+  separate(Taxa, c("Kingdom", "Phylum"), "p__") 
+
+top_taxa <- phylum %>% group_by(Phylum) %>% summarise(Ab = sum(Abundance)) %>% top_n(6) %>% 
+  union(data.frame (Phylum  = "Others", Ab = 0)) %>% arrange((Ab))
+  
+phylum$Top_Taxa <- ifelse(phylum$Phylum %in% top_taxa$Phylum, phylum$Phylum, "Others")
+
+phylum$Top_Taxa <- factor(phylum$Top_Taxa, levels = c("Actinobacteria","Firmicutes","Bacteroidetes","Euryarchaeota","Proteobacteria","Kiritimatiellaeota","Others"))
+
+phylum_plot <- phylum %>% 
+  ggbarplot(x = "Treatment", y = "Abundance",
+            color = "Top_Taxa", fill = "Top_Taxa", palette = get_palette("npg", 7),
+            xlab = F, ylab = "Mean normalized abundance",
+            legend = "right",
+            #position = position_fill(),
+            facet.by = "Time_tx", nrow = 1
+            ) +
+  labs(color = "Taxa", fill = "Taxa")
+phylum_plot
+```
+
+# Microbiome diversity
+
+## Phyloseq table formatting
+
+Feature table used for alpha diversity: Matrix with sequence_id as columns and features as rows
+```{r}
+library(tibble)
+#The number of reads is used for alpha diversity since it is measures a "within-sample" diversity
+feature_alpha <- metadata %>% select(sequence_id,Taxa,Reads) %>% 
+  spread(sequence_id, Reads) %>% 
+  remove_rownames %>% column_to_rownames(var="Taxa") %>% 
+  as.matrix(rownames=TRUE)
+feature_alpha[is.na(feature_alpha)] <- 0
+```
+
+Taxonomy table
+```{r}
+taxonomy <- microbiome %>% select(Taxa) %>% distinct() %>%
+  mutate(Feature = Taxa) %>% 
+  remove_rownames %>% column_to_rownames(var="Taxa") %>% 
+  as.matrix()
+```
+
+Metadata to matrix
+```{r}
+metadata_matrix <- merge(data,metagenome_stats) %>% 
+  remove_rownames %>% column_to_rownames(var="sequence_id")
+```
+
+Phyloseq object
+```{r}
+library("phyloseq")
+mode(feature_alpha) <- "integer"
+feature_alpha[is.na(feature_alpha)] <- 0
+
+# Making phyloseq objects
+OTU = otu_table(feature_alpha,taxa_are_rows=TRUE)
+TAX = tax_table(taxonomy)
+META = sample_data(metadata_matrix)
+
+# finaly phyloseq object with feature table, taxonomy and metadata
+physeq=phyloseq(OTU,TAX,META)
+```
+
+## Alpha diversity
+
+Calculation of Shannon, Observed, and Chao1
+```{r fig.width=10, fig.height=40}
+alpha_diversity <- estimate_richness(physeq, measures = c("Shannon", "Observed", "Chao1"))
+df_alpha <- data.frame(alpha_diversity, sample_data(physeq))
+alpha_table <- reshape2::melt(df_alpha, measure.var=c("Shannon","Observed","Chao1"),id.vars=c("Time_tx","Treatment","sample_ID","study_ID","Block","Cohort")) %>% 
+  rename(Index = variable) %>% mutate(Type = "Microbiome")
+alpha_table$value = as.numeric(alpha_table$value)
+alpha_table$Treatment <- factor(alpha_table$Treatment, levels= c("Control","Antibiotic"))
+```
+
+Shannon diversity plot
+```{r}
+#Calculating p-values between treatments by time point
+stat.test <- alpha_table %>% 
+  filter(Index == "Shannon", sample_ID %notin% c("MA028.7")) %>% 
+  group_by(Time_tx) %>%
+  wilcox_test(value ~ Treatment, alternative = "greater", paired = T) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p.adj") %>%
+  add_xy_position(x = "Time_tx", dodge = 0.8)
+stat.test
+
+#Boxplot of Shannon diversity between treatment groups over time
+shannon_boxplot = alpha_table %>% 
+  filter(Index == "Shannon") %>% 
+   ggboxplot(x = "Time_tx", y = "value", 
+            color = "Treatment", palette = "jama", fill = "Treatment", alpha = 0.5,
+            add = c("jitter"), notch = F, outlier.shape = NA, facet.by = "Type",
+            xlab = F, ylab = "Shannon Index", legend = "none") +
+  ylim(1.8,4.4)+
+  stat_pvalue_manual(stat.test,  label = "p", tip.length = 0)
+
+shannon_boxplot
+```
+
+Observed diversity
+```{r }
+#Calculating p-values between treatments by time point
+stat.test <- alpha_table %>% 
+  filter(Index == "Observed", sample_ID %notin% c("MA028.7")) %>% 
+  group_by(Time_tx) %>%
+  wilcox_test(value ~ Treatment, alternative = "greater", paired = T) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p.adj") %>%
+  add_xy_position(x = "Time_tx", dodge = 0.8)
+stat.test
+
+Observed_boxplot = alpha_table %>% 
+  filter(Index == "Observed") %>% 
+   ggboxplot(x = "Time_tx", y = "value", 
+            color = "Treatment", palette = "jama", fill = "Treatment", alpha = 0.5,
+            add = c("jitter"), notch = F, outlier.shape = NA, facet.by = "Type",
+            xlab = F, ylab = "Observed Index") +
+  ylim(500,2100)+
+  stat_pvalue_manual(stat.test,  label = "p", tip.length = 0)
+
+Observed_boxplot
+```
+
+## Beta diversity 
+Feature table used for beta diversity: Matrix with sequence_id as columns and features as rows
+```{r}
+
+# Normalized abundance was used for beta diversity since it is a measure of diversity between samples (microbiome ecosystems)
+feature_table <- metadata %>% select(sequence_id,Taxa,normalized_abundance) %>% 
+  spread(sequence_id, normalized_abundance) %>% 
+  remove_rownames %>% column_to_rownames(var="Taxa") %>% 
+  as.matrix(rownames=TRUE)
+feature_table[is.na(feature_table)] <- 0
+```
+
+Phyloseq object for beta diversity
+```{r}
+# changing OTU table using the feature table with normalized abundances for beta diversity and converting it to a phyloseq objects
+OTU <- otu_table(feature_table,taxa_are_rows=TRUE)
+
+# finaly phyloseq object with feature table, taxonomy and metadata
+physeq=phyloseq(OTU,TAX,META)
+```
+
+Permanova by Time
+```{r}
+library(microbial)
+beta <- microbial::betatest(physeq, group="Time_tx", distance = "bray")
+beta
+```
+
+Bray-Curtis plot
+```{r fig.height=7, fig.width=7}
+bray_microbiome <- plotbeta(
+  physeq,
+  group="Time_tx",
+  shape = "Treatment",
+  distance = "bray",
+  method = "PCoA",
+  color = F,
+  size = 3,
+  ellipse = F) + 
+  labs(color = "Time", shape = "Treatment", fill="Time") + 
+  annotate("text", x = -0.1, y = 0.25, 
+           label = expression(paste("PERMANOVA, ",F ,"= 23.68, ",paste(italic('p')),"=0.001")), 
+           colour = "black", size = 4) + 
+  ggtitle("Microbiome") +
+  stat_ellipse(geom = "polygon",
+               aes(fill = Time_tx, group=Time_tx), 
+               alpha = 0.1)+
+  scale_fill_aaas() +
+  scale_color_aaas()+
+  theme_bw()
+bray_microbiome
+```
+Arranging microbiome plots
+```{r fig.height=7, fig.width=13}
+microbiome_plots <- ggarrange(Abundance_boxplot,phylum_plot,shannon_boxplot,bray_microbiome, labels = c("A","C","B","D"), widths = c(1,2,1,2))
+microbiome_plots
+```
+
+Saving plot
+```{r}
+setwd("/Users/karlavasco/Library/CloudStorage/OneDrive-MichiganStateUniversity/Manning_lab/Mastitis_project/metagenome_KV/figures")
+ggsave(plot=microbiome_plots, "Fig4_microbiome.png", width = 13, height = 7)
+```
+
+# Differential abundance analyses
+
+Aggregate phyloseq objects by time points
+```{r}
+physeq_day1 <- subset_samples(physeq, Time_tx%in%"Day -1")
+physeq_week1 <- subset_samples(physeq, Time_tx%in%c("Week 1"))
+physeq_week5 <- subset_samples(physeq, Time_tx%in%c("Week 5"))
+physeq_week9 <- subset_samples(physeq, Time_tx%in%c("Week 9"))
+```
+
+Day 1 (other time points were done in the same way)
+```{r}
+physeq <- physeq_day1
+```
+
+LEfSE
+```{r}
+lefse <- microbial::ldamarker(physeq, group="Treatment", pvalue = 0.05, normalize = T,method = "log2")
+lefse_sigtab <- lefse[which(lefse$p.value<0.05), ]
+lefse_sigtab <- lefse_sigtab %>% select(rank, direction,tax, LDAscore, p.value, p.adj) %>% arrange(tax)
+```
+
+ANCOMBC
+```{r}
+library(nloptr)
+library(ANCOMBC)
+#ANCOMBC analysis comparison between treatment groups
+out = ancombc(data = physeq, formula = "Treatment", 
+              p_adj_method = "holm", lib_cut = 0,
+              group = "Treatment", struc_zero = F, neg_lb = FALSE,
+              tol = 1e-05, max_iter = 100, conserve = TRUE,
+              alpha = 0.05, global = TRUE)
+
+#ANCOMBC results as a list
+res = out$res
+
+#ANCOMBC results as a table
+ancom_results = res %>% as.data.frame()
+
+# Filtering only significant results
+ancom_signif <- ancom_results %>% dplyr::filter(p_val.TreatmentControl <= 0.05)
+```
+
+Saving Lefse and ANCOM-BC results as an Excel file
+```{r}
+#setwd("/Users/karlavasco/Library/CloudStorage/OneDrive-MichiganStateUniversity/Manning_lab/Mastitis_project/metagenome_KV/tables/differential/microbiome_metaphlan")
+
+#library(xlsx)
+#write.xlsx(as.data.frame(lefse_sigtab), file="microbiome_day1_treatment_diff.xlsx", sheetName="lefse", row.names=FALSE)
+#write.xlsx(ancom_signif, file="microbiome_day1_treatment_diff.xlsx", sheetName="ancombc", append=TRUE, row.names=FALSE)
+```
+
+MaAsLin2
+```{r results = FALSE}
+library(Maaslin2)
+setwd("/Users/karlavasco/Library/CloudStorage/OneDrive-MichiganStateUniversity/Manning_lab/Mastitis_project/metagenome_KV/tables/differential/microbiome_metaphlan")
+# Formating abundance table for MaAsLin2 
+table <- merge(physeq@tax_table,data.frame(otu_table(physeq)), by = 0) %>% remove_rownames %>% column_to_rownames(var="Row.names")
+
+fit_data = Maaslin2(
+  input_data = merge(physeq@tax_table,data.frame(otu_table(physeq)), by = 0) %>% 
+    remove_rownames %>% column_to_rownames(var="Row.names")  %>% select(2:41),
+  input_metadata = metadata_matrix,
+  output = 'maaslin2_microbiome_day1_notemp',
+  fixed_effects = c('Treatment'),
+#  random_effects = c("temperature_Celsius"),
+  min_prevalence = 0.01,
+  min_abundance =  0.0,
+  standardize = T
+)
+```
+
+## Plots of differential abundance analyses
+
+Importing results manually curated and compared between pipelines
+```{r}
+library(readxl)
+
+setwd("/Users/karlavasco/Library/CloudStorage/OneDrive-MichiganStateUniversity/Manning_lab/Mastitis_project/metagenome_KV/tables/microbiome/differential")
+diff_taxa <- read_excel("summary_differential_taxa.xlsx", sheet = "taxa")
+```
+
+Calculating mean abundance per taxa and time point
+```{r}
+mean_taxa <- metadata %>% select(Taxa,Time_tx,normalized_abundance) %>% group_by(Taxa,Time_tx) %>% summarise(mean_taxa = mean(normalized_abundance))
+```
+
+Generating a table with differential abundance and mean taxa
+```{r}
+differential <- merge(metadata, diff_taxa, by = "Taxa") %>% 
+  merge(mean_taxa, by = c("Taxa","Time_tx"))
+differential$Treatment <- factor(differential$Treatment, levels= c("Control","Antibiotic"))
+```
+
+Differential plot week 1
+```{r fig.width=8, fig.height=6}
+mean_w1 <- differential %>%   
+  filter(`Week 1` >= 1) %>% 
+  select(Taxa,normalized_abundance) %>% 
+  group_by(Taxa) %>% 
+  dplyr::summarise(mean_taxa = mean(normalized_abundance)) 
+mean_w1$mean_taxa <- as.numeric(as.character(mean_w1$mean_taxa))
+
+diff_week1 <- differential %>% 
+  filter(`Week 1` >= 1,Time_tx=="Week 1") %>%
+  merge(mean_w1, by = "Taxa") %>% 
+  select(id,normalized_abundance,Treatment,mean_taxa.x) %>% 
+  mutate(fc = normalized_abundance/mean_taxa.x) %>% 
+  select(id,fc,Treatment) %>% mutate(time = "Week 1")
+diff_week1$fc <- as.numeric(as.character(diff_week1$fc))
+order_taxa <- diff_week1 %>% filter(Treatment =="Antibiotic") %>%
+  select(id,fc) %>% 
+  group_by(id) %>% 
+  dplyr::summarise(mean_fc = mean(fc)) %>% 
+  arrange(mean_fc)
+
+week1_plot <- diff_week1 %>% 
+  ggbarplot(x="id", y = "fc", add="mean_se",color = "Treatment", fill = "Treatment",palette = "jama",orientation = "horiz", alpha = 0.5,legend = "right", ylab = "Mean fold change", xlab = "",facet.by = "time", order = order_taxa$id) +
+  geom_hline(yintercept = 1, linetype="dotted", 
+                color = "black", size=1)
+#+ ylim(0,2)
+week1_plot
+```
+
+Differential plot week 5
+```{r fig.width=8, fig.height=6}
+mean_w5 <- differential %>%   
+  filter(`Week 5` >= 1) %>% 
+  select(Taxa,normalized_abundance) %>% 
+  group_by(Taxa) %>% 
+  dplyr::summarise(mean_taxa = mean(normalized_abundance)) 
+mean_w5$mean_taxa <- as.numeric(as.character(mean_w5$mean_taxa))
+
+diff_week5 <- differential %>% 
+  filter(`Week 5` >= 1,Time_tx=="Week 5") %>%
+  merge(mean_w5, by = "Taxa") %>% 
+  select(id,normalized_abundance,Treatment,mean_taxa.x) %>% 
+  mutate(fc = normalized_abundance/mean_taxa.x) %>% 
+  select(id,fc,Treatment) %>% mutate(time = "Week 5")
+diff_week5$fc <- as.numeric(as.character(diff_week5$fc))
+order_taxa <- diff_week5 %>% filter(Treatment =="Antibiotic") %>%
+  select(id,fc) %>% 
+  group_by(id) %>% 
+  dplyr::summarise(mean_fc = mean(fc)) %>% 
+  arrange(mean_fc)
+
+week5_plot <- diff_week5 %>% 
+  ggbarplot(x="id", y = "fc", add="mean_se",color = "Treatment", fill = "Treatment",palette = "jama",orientation = "horiz", alpha = 0.5, legend = "right", ylab = "Mean fold change", xlab = "", facet.by = "time", order = order_taxa$id)+
+  geom_hline(yintercept = 1, linetype="dotted", 
+                color = "black", size=1) #+ ylim(0,2)
+week5_plot
+```
+
+Differential plot week 9
+```{r fig.width=8, fig.height=6}
+mean_w9 <- differential %>%   
+  filter(`Week 9` >= 1) %>% 
+  select(Taxa,normalized_abundance) %>% 
+  group_by(Taxa) %>% 
+  dplyr::summarise(mean_taxa = mean(normalized_abundance)) 
+mean_w9$mean_taxa <- as.numeric(as.character(mean_w9$mean_taxa))
+
+diff_week9 <- differential %>% 
+  filter(`Week 9` >= 1,Time_tx=="Week 9") %>%
+  merge(mean_w9, by = "Taxa") %>% 
+  select(id,normalized_abundance,Treatment,mean_taxa.x) %>% 
+  mutate(fc = normalized_abundance/mean_taxa.x) %>% 
+  select(id,fc,Treatment) %>% mutate(time = "Week 9")
+diff_week9$fc <- as.numeric(as.character(diff_week9$fc))
+order_taxa <- diff_week9 %>% filter(Treatment =="Antibiotic") %>%
+  select(id,fc) %>% 
+  group_by(id) %>% 
+  dplyr::summarise(mean_fc = mean(fc)) %>% 
+  rbind(data_frame(id="p:Firmicutes|c:CFGB8350",mean_fc=0)) %>% 
+    arrange(mean_fc)
+
+week9_plot <- diff_week9 %>% 
+  ggbarplot(x="id", y = "fc", add="mean_se",color = "Treatment", fill = "Treatment",palette = "jama",orientation = "horiz", alpha = 0.5,legend = "right", ylab = "Mean fold change", xlab = "", facet.by = "time",order = order_taxa$id) +
+  geom_hline(yintercept = 1, linetype="dotted", 
+                color = "black", size=1)#+ ylim(0,2)
+week9_plot
+```
+
+Saving differential abundance plots
+```{r fig.height=15, fig.width=10}
+setwd("/Users/karlavasco/Library/CloudStorage/OneDrive-MichiganStateUniversity/Manning_lab/Mastitis_project/metagenome_KV/figures")
+diff_plots <- ggarrange(week1_plot,week5_plot,week9_plot,common.legend = T,ncol=1,nrow = 3, align = ("hv"))
+ggsave(plot=diff_plots, "diff_taxa_microbiome4.png", width = 10, height = 15)
+
+diff_plots
+```
